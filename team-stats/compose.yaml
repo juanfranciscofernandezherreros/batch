@@ -1,0 +1,12 @@
+services:
+  batch-csv:
+    build: .
+    environment:
+      DB_URL: ${DB_URL:-jdbc:postgresql://host.docker.internal:55432/basketball}
+      DB_USER: ${DB_USER:-test}
+      DB_PASS: ${DB_PASS:-test}
+      CSV_ALLOWED_ROOT: /data/csv
+      BATCH_CHUNK_SIZE: ${BATCH_CHUNK_SIZE:-500}
+    volumes:
+      - ${CSV_HOST_ROOT:-../shared-data}:/data/csv:ro
+    restart: "no"

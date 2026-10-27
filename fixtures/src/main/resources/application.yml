@@ -1,0 +1,26 @@
+spring:
+  application.name: csv-fixtures-batch
+  main.web-application-type: none
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 0
+      connection-init-sql: SET search_path TO ${DB_SCHEMA:fixtures},public
+      data-source-properties.reWriteBatchedInserts: true
+  flyway:
+    schemas: ${DB_SCHEMA:fixtures}
+    default-schema: ${DB_SCHEMA:fixtures}
+  batch:
+    job.enabled: false
+    jdbc.initialize-schema: never
+    jdbc.table-prefix: fixtures_batch.BATCH_
+app:
+  cli.enabled: true
+  csv.allowed-root: ${CSV_ALLOWED_ROOT:/data/csv}
+  batch.chunk-size: ${BATCH_CHUNK_SIZE:500}
+  processing:
+    max-file-size-bytes: ${FIXTURES_MAX_FILE_SIZE_BYTES:104857600}
+    max-rows-per-file: ${FIXTURES_MAX_ROWS_PER_FILE:1000000}

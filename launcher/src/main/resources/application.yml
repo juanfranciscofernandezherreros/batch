@@ -1,0 +1,50 @@
+spring:
+  application.name: csv-batch-launcher
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+  sql.init.mode: always
+  task.scheduling.pool.size: 2
+server.port: ${LAUNCHER_PORT:8088}
+app:
+  launcher:
+    directory-scan-enabled: ${LAUNCHER_DIRECTORY_SCAN_ENABLED:false}
+    watch-directory: ${WATCH_DIRECTORY:C:/data/basketball-ready/current}
+    poll-interval: ${WATCH_POLL_INTERVAL:2s}
+    stability-checks: ${WATCH_STABILITY_CHECKS:3}
+    state-file: ${LAUNCHER_STATE_FILE:${WATCH_DIRECTORY:C:/data/basketball-ready/current}/.csv-batch-launcher-state}
+    java-command: ${JAVA_COMMAND:C:/Program Files/Eclipse Adoptium/jdk-21.0.12.101-hotspot/bin/java.exe}
+    batch-db-url: ${BATCH_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    batch-db-user: ${BATCH_DB_USER:test}
+    batch-db-pass: ${BATCH_DB_PASS:test}
+    batch-db-urls:
+      results: ${RESULTS_DB_URL:${BATCH_DB_URL:jdbc:postgresql://localhost:55432/basketball}}
+      fixtures: ${FIXTURES_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      team-stats: ${TEAM_STATS_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      match-summary: ${MATCH_STATS_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      stats-player: ${PLAYER_STATS_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      point-by-point: ${POINT_BY_POINT_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      match-details: ${EXTRA_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      h2h: ${EXTRA_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+      odds: ${EXTRA_DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    batch-db-schemas:
+      results: ${RESULTS_DB_SCHEMA:results}
+      fixtures: ${FIXTURES_DB_SCHEMA:fixtures}
+      team-stats: ${TEAM_STATS_DB_SCHEMA:team_stats}
+      match-summary: ${MATCH_STATS_DB_SCHEMA:match_summary}
+      stats-player: ${PLAYER_STATS_DB_SCHEMA:stats_player}
+      point-by-point: ${POINT_BY_POINT_DB_SCHEMA:point_by_point}
+      match-details: ${MATCH_DETAILS_DB_SCHEMA:match_details}
+      h2h: ${H2H_DB_SCHEMA:h2h}
+      odds: ${ODDS_DB_SCHEMA:odds}
+    batches:
+      results: ${RESULTS_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/results/target/csv-results-batch.jar}
+      fixtures: ${FIXTURES_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/fixtures/target/csv-fixtures-batch.jar}
+      team-stats: ${TEAM_STATS_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/team-stats/target/csv-team-stats-batch.jar}
+      match-summary: ${MATCH_STATS_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/match-summary/target/csv-stats-match-batch.jar}
+      stats-player: ${PLAYER_STATS_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/stats-player/target/csv-stats-player-batch.jar}
+      point-by-point: ${POINT_BY_POINT_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/point-by-point/target/csv-point-by-point-batch.jar}
+      match-details: ${EXTRA_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/extra-importer/target/csv-extra-importer-batch.jar}
+      h2h: ${EXTRA_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/extra-importer/target/csv-extra-importer-batch.jar}
+      odds: ${EXTRA_BATCH_JAR:C:/Develop/basketball/csv-extra-batch/extra-importer/target/csv-extra-importer-batch.jar}

@@ -1,0 +1,14 @@
+# Overlay for the existing ../local-validation stack; no changes to that project.
+services:
+  batch-csv:
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/basketball
+      DB_USER: test
+      DB_PASS: test
+      CSV_ALLOWED_ROOT: ${BASKETBALL_DATA_ROOT:-/data/csv}
+    volumes:
+      - ${BASKETBALL_DATA_HOST_PATH:-C:/data/basketball}:${BASKETBALL_DATA_ROOT:-/data/csv}:ro
+networks:
+  default:
+    external: true
+    name: ${BASKETBALL_DOCKER_NETWORK:-local-validation_default}

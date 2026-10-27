@@ -1,0 +1,1 @@
+﻿ALTER TABLE fixtures ADD COLUMN IF NOT EXISTS event_datetime TIMESTAMPTZ;

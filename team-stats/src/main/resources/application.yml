@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: csv-team-stats-batch
+  main:
+    web-application-type: none
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 0
+      connection-init-sql: SET search_path TO ${DB_SCHEMA:team_stats},public
+      data-source-properties:
+        reWriteBatchedInserts: true
+  flyway:
+    schemas: ${DB_SCHEMA:team_stats}
+    default-schema: ${DB_SCHEMA:team_stats}
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+      table-prefix: team_stats_batch.BATCH_
+app:
+  csv:
+    allowed-root: ${CSV_ALLOWED_ROOT:/data/csv}
+  batch:
+    chunk-size: ${BATCH_CHUNK_SIZE:500}

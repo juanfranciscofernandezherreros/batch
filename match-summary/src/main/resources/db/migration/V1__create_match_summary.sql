@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS match_summary (id BIGSERIAL PRIMARY KEY, match_id VARCHAR(255) NOT NULL UNIQUE, source_event_id VARCHAR(255) NOT NULL, date VARCHAR(255), home_name VARCHAR(255), home_image VARCHAR(255), away_name VARCHAR(255), away_image VARCHAR(255), result_home VARCHAR(255), result_away VARCHAR(255));

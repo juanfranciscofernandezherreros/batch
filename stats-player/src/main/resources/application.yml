@@ -1,0 +1,23 @@
+spring:
+  application.name: csv-stats-player-batch
+  main.web-application-type: none
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/results_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 0
+      connection-init-sql: SET search_path TO ${DB_SCHEMA:stats_player},public
+      data-source-properties.reWriteBatchedInserts: true
+  flyway:
+    schemas: ${DB_SCHEMA:stats_player}
+    default-schema: ${DB_SCHEMA:stats_player}
+  batch:
+    job.enabled: false
+    jdbc.initialize-schema: never
+    jdbc.table-prefix: stats_player_batch.BATCH_
+app:
+  cli.enabled: true
+  csv.allowed-root: ${CSV_ALLOWED_ROOT:/data/csv}
+  batch.chunk-size: ${BATCH_CHUNK_SIZE:500}

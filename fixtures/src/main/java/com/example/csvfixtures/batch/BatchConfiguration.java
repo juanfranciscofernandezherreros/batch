@@ -1,0 +1,8 @@
+package com.example.csvfixtures.batch;
+import org.springframework.batch.core.Job; import org.springframework.batch.core.Step; import org.springframework.batch.core.configuration.annotation.StepScope; import org.springframework.batch.core.job.builder.JobBuilder; import org.springframework.batch.core.repository.JobRepository; import org.springframework.batch.core.step.builder.StepBuilder; import org.springframework.beans.factory.annotation.Value; import org.springframework.context.annotation.Bean; import org.springframework.context.annotation.Configuration; import org.springframework.jdbc.core.JdbcTemplate; import org.springframework.transaction.PlatformTransactionManager;
+@Configuration public class BatchConfiguration {
+    @Bean @StepScope FixturesCsvReader csvReader(CsvInput input, @Value("#{jobParameters['file']}") String file, @Value("#{jobParameters['checksum']}") String checksum, @Value("${app.processing.max-rows-per-file}") long maxRows) { return new FixturesCsvReader(input, file, checksum, maxRows); }
+    @Bean @StepScope FixturesWriter fixturesWriter(JdbcTemplate jdbc, @Value("#{jobParameters['file']}") String file) { return new FixturesWriter(jdbc, java.nio.file.Path.of(file).getFileName().toString()); }
+    @Bean Step importFixtures(JobRepository repo, PlatformTransactionManager tx, FixturesCsvReader reader, FixturesWriter writer, @Value("${app.batch.chunk-size}") int size) { if (size < 1) throw new IllegalArgumentException("Chunk size must be positive"); return new StepBuilder("importFixtures", repo).<FixtureRow, FixtureRow>chunk(size, tx).reader(reader).writer(writer).build(); }
+    @Bean Job fixturesJob(JobRepository repo, Step importFixtures) { return new JobBuilder("fixturesImport", repo).start(importFixtures).build(); }
+}

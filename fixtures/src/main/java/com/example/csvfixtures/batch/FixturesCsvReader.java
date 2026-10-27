@@ -1,0 +1,10 @@
+package com.example.csvfixtures.batch;
+import java.io.IOException; import java.nio.file.Path; import java.util.Iterator; import org.apache.commons.csv.CSVParser; import org.apache.commons.csv.CSVRecord; import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+public class FixturesCsvReader extends AbstractItemCountingItemStreamItemReader<FixtureRow> {
+    private final CsvInput input; private final String path; private final String checksum; private final long maxRows; private CSVParser parser; private Iterator<CSVRecord> records; private String country; private String competition; private long observedRows;
+    public FixturesCsvReader(CsvInput input, String path, String checksum, long maxRows) { this.input = input; this.path = path; this.checksum = checksum; this.maxRows = maxRows; setName("fixturesCsvReader"); }
+    @Override protected void doOpen() throws IOException { Path real = input.validate(path); if (!checksum.equals(CsvInput.checksum(real))) throw new IllegalArgumentException("CSV changed since job launch"); String name = real.getFileName().toString().replaceFirst("(?i)\\.csv$", ""); String[] p = name.split("_"); if (p.length >= 4 && p[1].matches("\\d{14}")) { country = p[2]; competition = String.join("_", java.util.Arrays.copyOfRange(p, 3, p.length)); } else { country = p[1]; competition = String.join("_", java.util.Arrays.copyOfRange(p, 2, p.length)); } parser = CsvInput.open(real); records = parser.iterator(); }
+    @Override protected FixtureRow doRead() { while (records.hasNext()) { CSVRecord record = records.next(); if (++observedRows > maxRows) throw new IllegalArgumentException("FIXTURES row count exceeds configured limit " + maxRows); FixtureRow row = FixtureRow.parse(record, country, competition); if (row != null) return row; } return null; }
+    @Override protected void jumpToItem(int count) { for (int i = 0; i < count; i++) { if (!records.hasNext()) throw new IllegalArgumentException("CSV is shorter than its checkpoint"); records.next(); } }
+    @Override protected void doClose() throws IOException { if (parser != null) parser.close(); }
+}

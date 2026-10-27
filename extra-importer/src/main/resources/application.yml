@@ -1,0 +1,14 @@
+spring:
+  application.name: csv-extra-batch
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    schemas: ${DB_SCHEMA:match_details}
+    default-schema: ${DB_SCHEMA:match_details}
+app:
+  csv:
+    allowed-root: ${CSV_ALLOWED_ROOT:C:/data/basketball-ready}

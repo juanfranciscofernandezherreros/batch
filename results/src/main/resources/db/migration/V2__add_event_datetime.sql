@@ -1,0 +1,1 @@
+ALTER TABLE results ADD COLUMN IF NOT EXISTS event_datetime TIMESTAMPTZ;

@@ -1,0 +1,10 @@
+# Maven build output
+**/target/
+**/BOOT-INF/
+**/META-INF/
+
+# Local IDE and environment files
+.idea/
+*.iml
+.env
+*.log

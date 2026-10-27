@@ -1,0 +1,23 @@
+spring:
+  application.name: csv-stats-match-batch
+  main.web-application-type: none
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 0
+      connection-init-sql: SET search_path TO ${DB_SCHEMA:match_summary},public
+      data-source-properties.reWriteBatchedInserts: true
+  flyway:
+    schemas: ${DB_SCHEMA:match_summary}
+    default-schema: ${DB_SCHEMA:match_summary}
+  batch:
+    job.enabled: false
+    jdbc.initialize-schema: never
+    jdbc.table-prefix: stats_match_batch.BATCH_
+app:
+  cli.enabled: true
+  csv.allowed-root: ${CSV_ALLOWED_ROOT:/data/csv}
+  batch.chunk-size: ${BATCH_CHUNK_SIZE:500}
