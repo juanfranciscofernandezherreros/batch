@@ -12,8 +12,8 @@ public class BatchLaunchController {
     @PostMapping
     public ResponseEntity<LaunchResponse> submit(@RequestBody LaunchRequest request) {
         var result = queue.enqueue(Path.of(request.file()));
-        return ResponseEntity.accepted().body(new LaunchResponse(result.requestId(), result.status(), result.type().key()));
+        return ResponseEntity.accepted().body(new LaunchResponse(result.requestId(), result.status(), result.type().key(), result.reason()));
     }
     @GetMapping("/{requestId}")
-    public LaunchResponse status(@PathVariable String requestId) { var result = queue.status(requestId); return new LaunchResponse(result.requestId(), result.status(), result.type().key()); }
+    public LaunchResponse status(@PathVariable String requestId) { var result = queue.status(requestId); return new LaunchResponse(result.requestId(), result.status(), result.type().key(), result.reason()); }
 }
