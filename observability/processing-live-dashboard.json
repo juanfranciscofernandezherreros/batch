@@ -255,7 +255,7 @@
       {
         "type": "stat",
         "title": "Importados hoy",
-        "description": "",
+        "description": "CSV generados hoy e importados (COMPLETED), incluidos los de contenido repetido.",
         "targets": [
           {
             "refId": "A",
@@ -266,7 +266,7 @@
             "rawQuery": true,
             "editorMode": "code",
             "format": "table",
-            "rawSql": "SELECT count(*) AS importados FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND created_at >= date_trunc('day', now())"
+            "rawSql": "SELECT count(*) AS importados FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED' AND generado >= date_trunc('day', now())"
           }
         ],
         "options": {
@@ -390,7 +390,7 @@
             "rawQuery": true,
             "editorMode": "code",
             "format": "table",
-            "rawSql": "SELECT extract(epoch FROM max(finished_at)) * 1000 AS ultima FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion)))"
+            "rawSql": "SELECT extract(epoch FROM max(generado)) * 1000 AS ultima FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED'"
           }
         ],
         "options": {
@@ -584,7 +584,7 @@
             "rawQuery": true,
             "editorMode": "code",
             "format": "time_series",
-            "rawSql": "SELECT $__timeGroupAlias(finished_at, '1m'), batch_type AS metric, count(*) AS value FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND $__timeFilter(finished_at) GROUP BY 1, 2 ORDER BY 1"
+            "rawSql": "SELECT $__timeGroupAlias(generado, '1m'), dataset AS metric, count(*) AS value FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED' AND $__timeFilter(generado) GROUP BY 1, 2 ORDER BY 1"
           }
         ],
         "options": {
@@ -636,7 +636,7 @@
             "rawQuery": true,
             "editorMode": "code",
             "format": "table",
-            "rawSql": "SELECT batch_type AS tipo, count(*) AS importados FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND created_at >= date_trunc('day', now()) GROUP BY 1 ORDER BY 2 DESC"
+            "rawSql": "SELECT dataset AS tipo, count(*) AS importados FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED' AND generado >= date_trunc('day', now()) GROUP BY 1 ORDER BY 2 DESC"
           }
         ],
         "options": {
@@ -761,7 +761,7 @@
       },
       {
         "type": "table",
-        "title": "Ultimas importaciones",
+        "title": "Ultimos CSV (todos, tambien los repetidos)",
         "targets": [
           {
             "refId": "A",
@@ -772,7 +772,7 @@
             "rawQuery": true,
             "editorMode": "code",
             "format": "table",
-            "rawSql": "SELECT created_at AS encolado, status AS estado, batch_type AS tipo, regexp_replace(file_path, '^.*[/\\\\]', '') AS fichero, round(extract(epoch FROM finished_at - started_at)) AS segundos, attempts AS intentos, error FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 200"
+            "rawSql": "SELECT generado, estado, repetido, dataset AS tipo, liga, fichero FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND $__timeFilter(generado) ORDER BY generado DESC LIMIT 200"
           }
         ],
         "options": {

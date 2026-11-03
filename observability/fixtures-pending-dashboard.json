@@ -1,0 +1,968 @@
+{
+  "dashboard": {
+    "uid": "fixtures-audit-live",
+    "title": "Basketball - Partidos pendientes",
+    "tags": [
+      "basketball",
+      "fixtures",
+      "pendientes"
+    ],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "30s",
+    "schemaVersion": 39,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {
+      "hidden": true
+    },
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Estado",
+        "description": "COMPLETED si la ultima auditoria termino bien.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "",
+            "columns": [
+              {
+                "selector": "status",
+                "text": "Estado",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                }
+              ]
+            },
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "COMPLETED": {
+                    "text": "OK",
+                    "color": "green",
+                    "index": 0
+                  }
+                }
+              },
+              {
+                "type": "special",
+                "options": {
+                  "match": "null+nan",
+                  "result": {
+                    "text": "SIN DATOS",
+                    "color": "red",
+                    "index": 1
+                  }
+                }
+              },
+              {
+                "type": "regex",
+                "options": {
+                  "pattern": "^(?!COMPLETED$).*",
+                  "result": {
+                    "color": "red",
+                    "index": 2
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "id": 1,
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Pendientes",
+        "description": "Partidos elegibles a los que aun les falta algun dataset.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "($p := \"${pais:csv}\"; $c := \"${competicion:csv}\"; $m := pendingMatches[($p = \"'__all__'\" or country in $split($p, \",\")) and ($c = \"'__all__'\" or competition in $split($c, \",\"))]; [{\"pendientes\": $count($m)}])",
+            "columns": []
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 50
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 2,
+        "gridPos": {
+          "x": 3,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Completados",
+        "description": "",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "($c := eligibleFixtures - pendingFixtures; [{\"completados\": $c}])"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 3,
+        "gridPos": {
+          "x": 6,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "% hecho",
+        "description": "",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "([{\"pct\": eligibleFixtures = 0 ? 100 : $round((eligibleFixtures - pendingFixtures) / eligibleFixtures * 100, 1)}])"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 80
+                },
+                {
+                  "color": "green",
+                  "value": 100
+                }
+              ]
+            },
+            "min": 0,
+            "max": 100,
+            "decimals": 1
+          },
+          "overrides": []
+        },
+        "id": 4,
+        "gridPos": {
+          "x": 9,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Elegibles",
+        "description": "Fixtures ya jugados hasta la fecha de corte.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "",
+            "columns": [
+              {
+                "selector": "eligibleFixtures",
+                "text": "Elegibles",
+                "type": "number"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 5,
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Fixtures",
+        "description": "",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "",
+            "columns": [
+              {
+                "selector": "totalFixtures",
+                "text": "Total",
+                "type": "number"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 6,
+        "gridPos": {
+          "x": 15,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Corte",
+        "description": "Se auditan los fixtures jugados hasta esta fecha.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "",
+            "columns": [
+              {
+                "selector": "cutoffDate",
+                "text": "Corte",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 7,
+        "gridPos": {
+          "x": 18,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Actualizado",
+        "description": "Hora de la ultima auditoria (se refresca sola).",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "([{\"hora\": $substring(refreshedAt, 11, 8)}])"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 8,
+        "gridPos": {
+          "x": 21,
+          "y": 0,
+          "w": 3,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "barchart",
+        "title": "Pendientes por dataset",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "($p := \"${pais:csv}\"; $c := \"${competicion:csv}\"; $m := pendingMatches[($p = \"'__all__'\" or country in $split($p, \",\")) and ($c = \"'__all__'\" or competition in $split($c, \",\"))]; $d := $m.pendingDatasets; $distinct($d).($x := $; {\"dataset\": $x, \"partidos\": $count($d[$ = $x])}))"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "showValue": "always",
+          "legend": {
+            "showLegend": false
+          },
+          "xField": "dataset",
+          "barWidth": 0.7,
+          "tooltip": {
+            "mode": "single"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "orange"
+            },
+            "min": 0
+          },
+          "overrides": []
+        },
+        "id": 9,
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 12,
+          "h": 9
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "barchart",
+        "title": "Pendientes por competicion",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "($p := \"${pais:csv}\"; $c := \"${competicion:csv}\"; $m := pendingMatches[($p = \"'__all__'\" or country in $split($p, \",\")) and ($c = \"'__all__'\" or competition in $split($c, \",\"))]; [$each($m{competition: $count(matchId)}, function($v, $k) {{\"competicion\": $k, \"partidos\": $v}})])"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "showValue": "always",
+          "legend": {
+            "showLegend": false
+          },
+          "xField": "competicion",
+          "barWidth": 0.7,
+          "tooltip": {
+            "mode": "single"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "orange"
+            },
+            "min": 0
+          },
+          "overrides": []
+        },
+        "id": 10,
+        "gridPos": {
+          "x": 12,
+          "y": 4,
+          "w": 12,
+          "h": 9
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "table",
+        "title": "Partidos pendientes",
+        "description": "Clic en el matchId para abrir el partido en Flashscore. Cada columna se puede filtrar.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "($p := \"${pais:csv}\"; $c := \"${competicion:csv}\"; $m := pendingMatches[($p = \"'__all__'\" or country in $split($p, \",\")) and ($c = \"'__all__'\" or competition in $split($c, \",\"))]; $m.{\"fecha\": matchDate, \"pais\": country, \"competicion\": competition, \"matchId\": matchId, \"partido\": homeTeam & \" - \" & awayTeam, \"faltan\": $count(pendingDatasets), \"pendiente\": $join(pendingDatasets, \", \")})"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm",
+          "sortBy": [
+            {
+              "displayName": "fecha",
+              "desc": true
+            }
+          ],
+          "footer": {
+            "show": true,
+            "reducer": [
+              "count"
+            ],
+            "fields": [
+              "matchId"
+            ],
+            "countRows": true
+          }
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "indexByName": {
+                "fecha": 0,
+                "pais": 1,
+                "competicion": 2,
+                "matchId": 3,
+                "partido": 4,
+                "faltan": 5,
+                "pendiente": 6
+              },
+              "renameByName": {
+                "fecha": "Fecha",
+                "pais": "Pais",
+                "competicion": "Competicion",
+                "partido": "Partido",
+                "faltan": "Datasets que faltan",
+                "pendiente": "Pendiente"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": true,
+              "align": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "matchId"
+              },
+              "properties": [
+                {
+                  "id": "links",
+                  "value": [
+                    {
+                      "title": "Abrir en Flashscore",
+                      "url": "https://www.flashscore.com/match/${__value.raw}/",
+                      "targetBlank": true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Datasets que faltan"
+              },
+              "properties": [
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background",
+                    "mode": "basic"
+                  }
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "orange",
+                        "value": 1
+                      },
+                      {
+                        "color": "red",
+                        "value": 3
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Fecha"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 110
+                }
+              ]
+            }
+          ]
+        },
+        "id": 11,
+        "gridPos": {
+          "x": 0,
+          "y": 13,
+          "w": 24,
+          "h": 16
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      }
+    ],
+    "description": "Pendientes del modulo fixtures-processing-audit (GET :8090/fixtures-processing-audit/latest) via datasource Infinity fixtures-audit-http.",
+    "links": [
+      {
+        "title": "JSON en vivo",
+        "type": "link",
+        "url": "http://localhost:8090/fixtures-processing-audit/latest",
+        "targetBlank": true
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "pais",
+          "label": "Pais",
+          "type": "query",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-results"
+          },
+          "query": "SELECT country FROM fixtures.fixtures UNION SELECT country FROM results.results ORDER BY 1",
+          "definition": "SELECT country FROM fixtures.fixtures UNION SELECT country FROM results.results ORDER BY 1",
+          "multi": true,
+          "includeAll": true,
+          "allValue": "'__all__'",
+          "refresh": 1,
+          "sort": 1,
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          }
+        },
+        {
+          "name": "competicion",
+          "label": "Competicion",
+          "type": "query",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-results"
+          },
+          "query": "SELECT competition FROM (SELECT country, competition FROM fixtures.fixtures UNION SELECT country, competition FROM results.results) l WHERE ('__all__' IN ($pais) OR country IN ($pais)) ORDER BY 1",
+          "definition": "SELECT competition FROM (SELECT country, competition FROM fixtures.fixtures UNION SELECT country, competition FROM results.results) l WHERE ('__all__' IN ($pais) OR country IN ($pais)) ORDER BY 1",
+          "multi": true,
+          "includeAll": true,
+          "allValue": "'__all__'",
+          "refresh": 1,
+          "sort": 1,
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "overwrite": true,
+  "message": "Dashboard de partidos pendientes"
+}
