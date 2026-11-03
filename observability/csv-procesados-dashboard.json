@@ -1,0 +1,391 @@
+{
+  "dashboard": {
+    "uid": "csv-procesados",
+    "title": "Basketball - CSV procesados",
+    "tags": [
+      "basketball",
+      "csv"
+    ],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "10s",
+    "schemaVersion": 39,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "description": "Cada CSV importado correctamente en PostgreSQL (vista public.v_csv_procesados).",
+    "links": [
+      {
+        "title": "Procesamiento en vivo",
+        "type": "link",
+        "url": "/d/processing-live"
+      },
+      {
+        "title": "Partidos pendientes",
+        "type": "link",
+        "url": "/d/fixtures-audit-live"
+      }
+    ],
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "CSV procesados correctamente hoy",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT count(*) AS hoy FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED' AND generado >= date_trunc('day', now())"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "green"
+            }
+          },
+          "overrides": []
+        },
+        "description": "CSV generados hoy que el launcher importo (COMPLETED), incluidos los de contenido repetido."
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Ultimo CSV procesado",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 8,
+          "y": 0,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT extract(epoch FROM max(generado)) * 1000 AS ultimo FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED'"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "dateTimeFromNow",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "blue"
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Ultimo fichero",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 16,
+          "y": 0,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT fichero FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED' ORDER BY generado DESC LIMIT 1"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/^fichero$/",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "purple"
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "id": 4,
+        "type": "table",
+        "title": "Todos los CSV generados y su estado (el mas reciente arriba)",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 24,
+          "h": 22
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT g.generado, g.estado, g.repetido, g.dataset, g.liga, p.partido, g.fichero, g.tamano_bytes AS bytes FROM public.v_csv_generados g LEFT JOIN public.v_csv_procesados p ON p.request_id = g.request_id WHERE ('__all__' IN ($pais) OR g.pais IN ($pais)) AND ('__all__' IN ($competicion) OR g.competicion IN ($competicion)) AND $__timeFilter(g.generado) ORDER BY g.generado DESC LIMIT 1000"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm",
+          "footer": {
+            "show": true,
+            "reducer": [
+              "count"
+            ],
+            "fields": [
+              "fichero"
+            ],
+            "countRows": true
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": true
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "dataset"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 150
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "liga"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 190
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "estado"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "COMPLETED": {
+                          "color": "green",
+                          "index": 0
+                        },
+                        "FAILED": {
+                          "color": "red",
+                          "index": 1
+                        },
+                        "RUNNING": {
+                          "color": "blue",
+                          "index": 2
+                        },
+                        "QUEUED": {
+                          "color": "yellow",
+                          "index": 3
+                        },
+                        "SIN ENVIAR": {
+                          "color": "orange",
+                          "index": 4
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background"
+                  }
+                },
+                {
+                  "id": "custom.width",
+                  "value": 110
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "repetido"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 80
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "generado"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 170
+                }
+              ]
+            }
+          ]
+        },
+        "description": "Un registro por fichero CSV (public.csv_generated_file), aunque despues se borre. COMPLETED = importado; repetido = si: su contenido ya estaba importado, no traia datos nuevos. SIN ENVIAR = no llego al launcher (p. ej. CSV vacio porque Flashscore aun no tiene datos, o MATCH_DETAILS, que no se importa)."
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "pais",
+          "label": "Pais",
+          "type": "query",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-results"
+          },
+          "query": "SELECT country FROM fixtures.fixtures UNION SELECT country FROM results.results ORDER BY 1",
+          "definition": "SELECT country FROM fixtures.fixtures UNION SELECT country FROM results.results ORDER BY 1",
+          "multi": true,
+          "includeAll": true,
+          "allValue": "'__all__'",
+          "refresh": 1,
+          "sort": 1,
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          }
+        },
+        {
+          "name": "competicion",
+          "label": "Competicion",
+          "type": "query",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-results"
+          },
+          "query": "SELECT competition FROM (SELECT country, competition FROM fixtures.fixtures UNION SELECT country, competition FROM results.results) l WHERE ('__all__' IN ($pais) OR country IN ($pais)) ORDER BY 1",
+          "definition": "SELECT competition FROM (SELECT country, competition FROM fixtures.fixtures UNION SELECT country, competition FROM results.results) l WHERE ('__all__' IN ($pais) OR country IN ($pais)) ORDER BY 1",
+          "multi": true,
+          "includeAll": true,
+          "allValue": "'__all__'",
+          "refresh": 1,
+          "sort": 1,
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "overwrite": true,
+  "message": "Dashboard de CSV procesados"
+}

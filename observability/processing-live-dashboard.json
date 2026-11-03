@@ -1,0 +1,963 @@
+{
+  "dashboard": {
+    "uid": "processing-live",
+    "title": "Basketball - Procesamiento en vivo",
+    "tags": [
+      "basketball",
+      "launcher",
+      "procesamiento"
+    ],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "10s",
+    "schemaVersion": 39,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "description": "Importaciones del csv-batch-launcher en tiempo real (tabla public.batch_launch_request).",
+    "links": [
+      {
+        "title": "Partidos pendientes",
+        "type": "link",
+        "url": "/d/fixtures-audit-live",
+        "targetBlank": false
+      }
+    ],
+    "panels": [
+      {
+        "type": "stat",
+        "id": 11,
+        "title": "Extrayendo ahora",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "description": "Pasos del orquestador de ligas (scripts\\ligas\\ORQUESTAR_LIGAS.ps1) en marcha: extraccion de Flashscore o importacion. Sale de public.pipeline_step.",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 4,
+          "h": 7
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT count(*) AS en_curso FROM public.pipeline_step WHERE estado = 'RUNNING' AND started_at > now() - interval '12 hours' AND ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion))"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "text",
+                  "value": null
+                },
+                {
+                  "color": "blue",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "type": "table",
+        "id": 12,
+        "title": "Orquestador: pasos en curso y recientes",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "description": "Cada paso por liga (RESULTS extraer, RESULTS importar, POINT_BY_POINT extraer...). EN CURSO = se esta haciendo ahora; cubre tambien la extraccion, que no aparece en las tablas de importaciones hasta que hay CSV.",
+        "gridPos": {
+          "x": 4,
+          "y": 0,
+          "w": 20,
+          "h": 7
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT estado, liga, paso, started_at AS empezado, finished_at AS terminado, round(extract(epoch FROM coalesce(finished_at, now()) - started_at)) AS segundos, detalle FROM public.pipeline_step WHERE ((estado = 'RUNNING' AND started_at > now() - interval '12 hours') OR started_at > now() - interval '24 hours') AND ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) ORDER BY (estado = 'RUNNING') DESC, started_at DESC LIMIT 50"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": false
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "estado"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "OK": {
+                          "color": "green",
+                          "index": 0
+                        },
+                        "FALLO": {
+                          "color": "red",
+                          "index": 1
+                        },
+                        "RUNNING": {
+                          "color": "blue",
+                          "index": 2,
+                          "text": "EN CURSO"
+                        },
+                        "OMITIDO": {
+                          "color": "yellow",
+                          "index": 3
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background"
+                  }
+                },
+                {
+                  "id": "custom.width",
+                  "value": 100
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "segundos"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "s"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "type": "stat",
+        "title": "En curso ahora",
+        "description": "CSV que el launcher esta importando o tiene en cola en este momento.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT count(*) AS en_curso FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status IN ('QUEUED','RUNNING')"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "text",
+                  "value": null
+                },
+                {
+                  "color": "blue",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 1,
+        "gridPos": {
+          "x": 0,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Importados hoy",
+        "description": "",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT count(*) AS importados FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND created_at >= date_trunc('day', now())"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 2,
+        "gridPos": {
+          "x": 4,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Fallidos hoy",
+        "description": "",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT count(*) AS fallidos FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'FAILED' AND created_at >= date_trunc('day', now())"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 3,
+        "gridPos": {
+          "x": 8,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Ultima importacion",
+        "description": "Cuando termino la importacion mas reciente. Si deja de avanzar, el procesamiento esta parado.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT extract(epoch FROM max(finished_at)) * 1000 AS ultima FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion)))"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "dateTimeFromNow",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "purple",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 4,
+        "gridPos": {
+          "x": 12,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Duracion media (hoy)",
+        "description": "",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT avg(extract(epoch FROM finished_at - started_at)) AS segundos FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND created_at >= date_trunc('day', now())"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 5,
+        "gridPos": {
+          "x": 16,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "stat",
+        "title": "Partidos pendientes",
+        "description": "De la auditoria de fixtures. Solo se actualiza cuando se pide una auditoria nueva.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "parser": "backend",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/latest",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "root_selector": "($p := \"${pais:csv}\"; $c := \"${competicion:csv}\"; $m := pendingMatches[($p = \"'__all__'\" or country in $split($p, \",\")) and ($c = \"'__all__'\" or competition in $split($c, \",\"))]; [{\"pendientes\": $count($m)}])",
+            "columns": []
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 50
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "id": 6,
+        "gridPos": {
+          "x": 20,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "fixtures-audit-http"
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Importaciones por minuto (por tipo de dataset)",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "time_series",
+            "rawSql": "SELECT $__timeGroupAlias(finished_at, '1m'), batch_type AS metric, count(*) AS value FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND $__timeFilter(finished_at) GROUP BY 1, 2 ORDER BY 1"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "multi"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 70,
+              "stacking": {
+                "mode": "normal"
+              },
+              "barAlignment": 0
+            },
+            "unit": "short",
+            "min": 0
+          },
+          "overrides": []
+        },
+        "id": 7,
+        "gridPos": {
+          "x": 0,
+          "y": 11,
+          "w": 16,
+          "h": 9
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "piechart",
+        "title": "Hoy por tipo de dataset",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT batch_type AS tipo, count(*) AS importados FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status = 'COMPLETED' AND created_at >= date_trunc('day', now()) GROUP BY 1 ORDER BY 2 DESC"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": true
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": [
+              "value"
+            ]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        },
+        "id": 8,
+        "gridPos": {
+          "x": 16,
+          "y": 11,
+          "w": 8,
+          "h": 9
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "table",
+        "title": "En curso ahora",
+        "description": "Se vacia cuando no hay ninguna importacion activa.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT status AS estado, batch_type AS tipo, regexp_replace(file_path, '^.*[/\\\\]', '') AS fichero, created_at AS encolado, started_at AS empezado, round(extract(epoch FROM now() - coalesce(started_at, created_at))) AS segundos FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND status IN ('QUEUED','RUNNING') ORDER BY created_at"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": false
+            },
+            "noValue": "Nada en curso"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "estado"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "COMPLETED": {
+                          "color": "green",
+                          "index": 0
+                        },
+                        "FAILED": {
+                          "color": "red",
+                          "index": 1
+                        },
+                        "RUNNING": {
+                          "color": "blue",
+                          "index": 2
+                        },
+                        "QUEUED": {
+                          "color": "yellow",
+                          "index": 3
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background"
+                  }
+                },
+                {
+                  "id": "custom.width",
+                  "value": 110
+                }
+              ]
+            }
+          ]
+        },
+        "id": 9,
+        "gridPos": {
+          "x": 0,
+          "y": 20,
+          "w": 24,
+          "h": 5
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      },
+      {
+        "type": "table",
+        "title": "Ultimas importaciones",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT created_at AS encolado, status AS estado, batch_type AS tipo, regexp_replace(file_path, '^.*[/\\\\]', '') AS fichero, round(extract(epoch FROM finished_at - started_at)) AS segundos, attempts AS intentos, error FROM public.batch_launch_request WHERE request_id IN (SELECT request_id FROM public.v_csv_procesados WHERE ('__all__' IN ($pais) OR split_part(liga, '/', 1) IN ($pais)) AND ('__all__' IN ($competicion) OR split_part(liga, '/', 2) IN ($competicion))) AND $__timeFilter(created_at) ORDER BY created_at DESC LIMIT 200"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm",
+          "footer": {
+            "show": true,
+            "reducer": [
+              "count"
+            ],
+            "fields": [
+              "fichero"
+            ],
+            "countRows": true
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": true
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "estado"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "COMPLETED": {
+                          "color": "green",
+                          "index": 0
+                        },
+                        "FAILED": {
+                          "color": "red",
+                          "index": 1
+                        },
+                        "RUNNING": {
+                          "color": "blue",
+                          "index": 2
+                        },
+                        "QUEUED": {
+                          "color": "yellow",
+                          "index": 3
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "custom.cellOptions",
+                  "value": {
+                    "type": "color-background"
+                  }
+                },
+                {
+                  "id": "custom.width",
+                  "value": 110
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "encolado"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 170
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "tipo"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 130
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "segundos"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 90
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "intentos"
+              },
+              "properties": [
+                {
+                  "id": "custom.width",
+                  "value": 80
+                }
+              ]
+            }
+          ]
+        },
+        "id": 10,
+        "gridPos": {
+          "x": 0,
+          "y": 25,
+          "w": 24,
+          "h": 14
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "pais",
+          "label": "Pais",
+          "type": "query",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-results"
+          },
+          "query": "SELECT country FROM fixtures.fixtures UNION SELECT country FROM results.results ORDER BY 1",
+          "definition": "SELECT country FROM fixtures.fixtures UNION SELECT country FROM results.results ORDER BY 1",
+          "multi": true,
+          "includeAll": true,
+          "allValue": "'__all__'",
+          "refresh": 1,
+          "sort": 1,
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          }
+        },
+        {
+          "name": "competicion",
+          "label": "Competicion",
+          "type": "query",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "postgres-results"
+          },
+          "query": "SELECT competition FROM (SELECT country, competition FROM fixtures.fixtures UNION SELECT country, competition FROM results.results) l WHERE ('__all__' IN ($pais) OR country IN ($pais)) ORDER BY 1",
+          "definition": "SELECT competition FROM (SELECT country, competition FROM fixtures.fixtures UNION SELECT country, competition FROM results.results) l WHERE ('__all__' IN ($pais) OR country IN ($pais)) ORDER BY 1",
+          "multi": true,
+          "includeAll": true,
+          "allValue": "'__all__'",
+          "refresh": 1,
+          "sort": 1,
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
+            ],
+            "value": [
+              "$__all"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "overwrite": true,
+  "message": "Dashboard de procesamiento en vivo"
+}
