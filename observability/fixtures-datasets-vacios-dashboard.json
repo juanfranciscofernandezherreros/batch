@@ -1,0 +1,148 @@
+{
+  "dashboard": {
+    "uid": "fixtures-datasets-vacios",
+    "title": "Basketball - Datasets vacios / no publicados",
+    "tags": [
+      "basketball",
+      "fixtures",
+      "vacios"
+    ],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "30s",
+    "schemaVersion": 39,
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {
+      "hidden": true
+    },
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Datasets marcados (la fuente no los publica)",
+        "description": "Total de (partido, dataset) que Flashscore no publica. No cuentan como pendientes: el partido esta completo con lo que si existe.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/dataset-unavailable",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "[{\"total\": $count($)}]",
+            "columns": [
+              {
+                "selector": "total",
+                "text": "Total",
+                "type": "number"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "/.*/",
+            "values": false
+          },
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value",
+          "justifyMode": "center"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "blue"
+            }
+          },
+          "overrides": []
+        },
+        "id": 1,
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        }
+      },
+      {
+        "type": "table",
+        "title": "Detalle: partidos con datasets no publicados",
+        "description": "Cada fila es un dataset que la fuente no publica para un partido. estado VACIO = pagina valida con 0 filas; NO_PUBLICADO = el bloque/enlace no existe.",
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "yesoreyeram-infinity-datasource",
+              "uid": "fixtures-audit-http"
+            },
+            "type": "json",
+            "source": "url",
+            "format": "table",
+            "url": "http://host.docker.internal:8090/fixtures-processing-audit/dataset-unavailable",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "parser": "backend",
+            "root_selector": "",
+            "columns": [
+              { "selector": "country", "text": "Pais", "type": "string" },
+              { "selector": "competition", "text": "Liga", "type": "string" },
+              { "selector": "match_id", "text": "Partido", "type": "string" },
+              { "selector": "dataset", "text": "Dataset", "type": "string" },
+              { "selector": "estado", "text": "Estado", "type": "string" },
+              { "selector": "rows_found", "text": "Filas", "type": "number" },
+              { "selector": "attempts", "text": "Intentos", "type": "number" },
+              { "selector": "last_seen", "text": "Ultima vez", "type": "string" },
+              { "selector": "source_url", "text": "URL", "type": "string" }
+            ]
+          }
+        ],
+        "options": {
+          "showHeader": true
+        },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "Estado" },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    { "type": "value", "options": { "VACIO": { "color": "orange", "index": 0 }, "NO_PUBLICADO": { "color": "red", "index": 1 } } }
+                  ]
+                },
+                { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+              ]
+            }
+          ]
+        },
+        "id": 2,
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 24,
+          "h": 16
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

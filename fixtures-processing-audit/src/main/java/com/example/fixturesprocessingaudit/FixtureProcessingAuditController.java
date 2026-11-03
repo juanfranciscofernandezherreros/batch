@@ -33,10 +33,18 @@ public class FixtureProcessingAuditController {
     @PostMapping("/dataset-unavailable")
     public ResponseEntity<FixtureProcessingAuditService.AuditSnapshot> markUnavailable(
             @RequestBody DatasetUnavailableRequest request) {
-        audit.markDatasetUnavailable(request.matchId(), request.dataset(), request.reason(),
-                request.attempts() == null ? 1 : request.attempts());
+        audit.markDatasetUnavailable(request.matchId(), request.dataset(), request.country(), request.competition(),
+                request.estado(), request.reason(), request.rows() == null ? 0 : request.rows(),
+                request.sourceUrl(), request.attempts() == null ? 1 : request.attempts());
         return ResponseEntity.ok(audit.latest());
     }
 
-    public record DatasetUnavailableRequest(String matchId, String dataset, String reason, Integer attempts) {}
+    /** Datasets marcados como vacios/no publicados (para el dashboard de Grafana). */
+    @GetMapping("/dataset-unavailable")
+    public java.util.List<java.util.Map<String, Object>> listUnavailable() {
+        return audit.listDatasetsVacios();
+    }
+
+    public record DatasetUnavailableRequest(String matchId, String dataset, String country, String competition,
+            String estado, String reason, Integer rows, String sourceUrl, Integer attempts) {}
 }

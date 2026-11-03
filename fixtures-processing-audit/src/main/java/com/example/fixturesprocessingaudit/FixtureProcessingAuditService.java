@@ -75,18 +75,31 @@ public class FixtureProcessingAuditService {
                 PRIMARY KEY (match_id, dataset),
                 CONSTRAINT dataset_unavailable_dataset_check
                     CHECK (dataset IN ('MATCH_SUMMARY', 'POINT_BY_POINT', 'TEAM_STATS', 'PLAYER_STATS'))
-            )
+            );
+            ALTER TABLE fixtures_processing_audit.dataset_unavailable
+                ADD COLUMN IF NOT EXISTS country     text,
+                ADD COLUMN IF NOT EXISTS competition text,
+                ADD COLUMN IF NOT EXISTS estado      text NOT NULL DEFAULT 'NO_PUBLICADO',
+                ADD COLUMN IF NOT EXISTS rows_found  integer NOT NULL DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS source_url  text;
             """;
 
     // Alta o actualizacion del registro "sin datos en la fuente". Si el partido se vuelve a
-    // intentar, suma un intento y refresca last_seen sin perder first_seen ni la razon inicial.
+    // intentar, suma un intento y refresca los campos sin perder first_seen. estado:
+    // VACIO (pagina valida con 0 filas) o NO_PUBLICADO (bloque/enlace que no existe).
     static final String MARK_UNAVAILABLE_SQL = """
-            INSERT INTO fixtures_processing_audit.dataset_unavailable (match_id, dataset, reason, attempts)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO fixtures_processing_audit.dataset_unavailable
+                (match_id, dataset, country, competition, estado, reason, rows_found, source_url, attempts)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (match_id, dataset) DO UPDATE
-               SET attempts = fixtures_processing_audit.dataset_unavailable.attempts + EXCLUDED.attempts,
-                   reason   = COALESCE(EXCLUDED.reason, fixtures_processing_audit.dataset_unavailable.reason),
-                   last_seen = now()
+               SET attempts    = fixtures_processing_audit.dataset_unavailable.attempts + EXCLUDED.attempts,
+                   estado      = EXCLUDED.estado,
+                   reason      = COALESCE(EXCLUDED.reason, fixtures_processing_audit.dataset_unavailable.reason),
+                   rows_found  = EXCLUDED.rows_found,
+                   country     = COALESCE(EXCLUDED.country, fixtures_processing_audit.dataset_unavailable.country),
+                   competition = COALESCE(EXCLUDED.competition, fixtures_processing_audit.dataset_unavailable.competition),
+                   source_url  = COALESCE(EXCLUDED.source_url, fixtures_processing_audit.dataset_unavailable.source_url),
+                   last_seen   = now()
             """;
 
     private final JdbcTemplate jdbc;
@@ -143,7 +156,8 @@ public class FixtureProcessingAuditService {
      * vacio tras agotar los reintentos. A partir de aqui la auditoria deja de marcar ese
      * dataset como pendiente, de modo que el orquestador no lo reabra en cada arranque.
      */
-    public void markDatasetUnavailable(String matchId, String dataset, String reason, int attempts) {
+    public void markDatasetUnavailable(String matchId, String dataset, String country, String competition,
+            String estado, String reason, int rows, String sourceUrl, int attempts) {
         String normalized = dataset == null ? "" : dataset.trim().toUpperCase(java.util.Locale.ROOT);
         if (!missingDatasetNames().contains(normalized)) {
             throw new IllegalArgumentException("Dataset no reconocido: " + dataset);
@@ -151,14 +165,31 @@ public class FixtureProcessingAuditService {
         if (matchId == null || matchId.isBlank()) {
             throw new IllegalArgumentException("match_id obligatorio");
         }
-        jdbc.update(MARK_UNAVAILABLE_SQL, matchId, normalized, reason, Math.max(1, attempts));
-        log.info("event=fixtures_processing_audit_dataset_unavailable match_id={} dataset={} reason={} attempts={}",
-                matchId, normalized, reason, attempts);
+        String estadoNormalized = estado == null || estado.isBlank() ? "NO_PUBLICADO" : estado.trim().toUpperCase(java.util.Locale.ROOT);
+        jdbc.update(MARK_UNAVAILABLE_SQL, matchId, normalized, country, competition, estadoNormalized,
+                reason, Math.max(0, rows), sourceUrl, Math.max(1, attempts));
+        log.info("event=fixtures_processing_audit_dataset_unavailable match_id={} dataset={} estado={} reason={} rows={} attempts={}",
+                matchId, normalized, estadoNormalized, reason, rows, attempts);
         if (enabled && !runOnce) refreshAudit(false);
     }
 
     private static java.util.Set<String> missingDatasetNames() {
         return java.util.Set.of("MATCH_SUMMARY", "POINT_BY_POINT", "TEAM_STATS", "PLAYER_STATS");
+    }
+
+    /** Lista los datasets marcados como vacios/no publicados, para el dashboard. */
+    public java.util.List<java.util.Map<String, Object>> listDatasetsVacios() {
+        try {
+            return jdbc.queryForList("""
+                    SELECT match_id, country, competition, dataset, estado, reason, rows_found, attempts,
+                           first_seen, last_seen, source_url
+                    FROM fixtures_processing_audit.dataset_unavailable
+                    ORDER BY last_seen DESC
+                    """);
+        } catch (RuntimeException exception) {
+            log.warn("event=fixtures_processing_audit_list_vacios_failed", exception);
+            return java.util.List.of();
+        }
     }
 
     public AuditSnapshot runAudit() {
