@@ -1,0 +1,175 @@
+{
+  "dashboard": {
+    "uid": "consumo-recursos",
+    "title": "Basketball - Consumo",
+    "description": "CPU, RAM, heap JVM, base de datos y disco. Datos de scripts\\monitor\\RECOLECTAR_CONSUMO.ps1 (esquema monitoring) y de pg_stat_activity en directo.",
+    "tags": ["basketball", "consumo", "recursos"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "refresh": "30s",
+    "time": { "from": "now-6h", "to": "now" },
+    "editable": true,
+    "panels": [
+      { "type": "row", "title": "Ahora", "id": 1, "collapsed": false, "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }, "panels": [] },
+      {
+        "type": "stat", "title": "CPU del proyecto", "id": 2, "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+        "description": "% de toda la máquina que usan los componentes del proyecto (sin edge-usuario) en la última muestra.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT coalesce(sum(cpu_pct), 0) AS value FROM monitoring.process_sample WHERE component <> 'edge-usuario' AND sampled_at = (SELECT max(sampled_at) FROM monitoring.process_sample)" } ],
+        "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "textMode": "value" },
+        "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 80 } ] } }, "overrides": [] }
+      },
+      {
+        "type": "stat", "title": "RAM del proyecto", "id": 3, "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+        "description": "Memoria (working set) de los componentes del proyecto, incluida la VM de Docker, en la última muestra.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT coalesce(sum(memory_mb), 0) AS value FROM monitoring.process_sample WHERE component <> 'edge-usuario' AND component NOT LIKE 'contenedor:%' AND sampled_at = (SELECT max(sampled_at) FROM monitoring.process_sample)" } ],
+        "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "textMode": "value" },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "decimals": 0, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 6000 }, { "color": "red", "value": 10000 } ] } }, "overrides": [] }
+      },
+      {
+        "type": "stat", "title": "Heap JVM usado", "id": 4, "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT coalesce(sum(heap_used_mb), 0) AS value FROM monitoring.jvm_sample WHERE sampled_at = (SELECT max(sampled_at) FROM monitoring.jvm_sample)" } ],
+        "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "decimals": 0, "color": { "mode": "fixed", "fixedColor": "blue" } }, "overrides": [] }
+      },
+      {
+        "type": "stat", "title": "Conexiones a Postgres", "id": 5, "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+        "description": "En directo desde pg_stat_activity (todas las bases del contenedor).",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT count(*) AS value FROM pg_stat_activity WHERE backend_type = 'client backend'" } ],
+        "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
+        "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 50 }, { "color": "red", "value": 90 } ] } }, "overrides": [] }
+      },
+      {
+        "type": "stat", "title": "Tamaño de la base", "id": 6, "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT pg_database_size(current_database()) / 1048576.0 AS value" } ],
+        "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "value" },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "purple" } }, "overrides": [] }
+      },
+      {
+        "type": "stat", "title": "Perfiles scoped_dir en %TEMP%", "id": 7, "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+        "description": "Perfiles de navegador que deja Selenium cuando no se llama a driver.quit(). Si crece, hay extracciones que terminan mal.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT size_mb AS value FROM monitoring.disk_sample WHERE label = 'scoped_dir' ORDER BY sampled_at DESC LIMIT 1" } ],
+        "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background", "graphMode": "none", "textMode": "value" },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "decimals": 0, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 500 }, { "color": "red", "value": 2000 } ] } }, "overrides": [] }
+      },
+
+      { "type": "row", "title": "CPU y RAM por componente", "id": 10, "collapsed": false, "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 }, "panels": [] },
+      {
+        "type": "timeseries", "title": "CPU por componente (% de la máquina)", "id": 11, "gridPos": { "x": 0, "y": 6, "w": 12, "h": 9 },
+        "description": "Contenedores: CPU de docker stats dividida entre los núcleos de Windows (aproximado).",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(sampled_at, $__interval), component AS metric, avg(cpu_pct) AS value FROM monitoring.process_sample WHERE $__timeFilter(sampled_at) AND cpu_pct IS NOT NULL GROUP BY 1, 2 ORDER BY 1" } ],
+        "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["mean", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+        "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "custom": { "drawStyle": "line", "fillOpacity": 25, "stacking": { "mode": "normal" }, "lineWidth": 1 } }, "overrides": [] }
+      },
+      {
+        "type": "timeseries", "title": "RAM por componente", "id": 12, "gridPos": { "x": 12, "y": 6, "w": 12, "h": 9 },
+        "description": "Working set de Windows. docker-vm ya incluye la memoria de los contenedores, que se muestran aparte.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(sampled_at, $__interval), component AS metric, avg(memory_mb) AS value FROM monitoring.process_sample WHERE $__timeFilter(sampled_at) GROUP BY 1, 2 ORDER BY 1" } ],
+        "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "min": 0, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1 } }, "overrides": [] }
+      },
+      {
+        "type": "table", "title": "Consumo actual por componente", "id": 13, "gridPos": { "x": 0, "y": 15, "w": 24, "h": 8 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT component AS \"Componente\", process_name AS \"Proceso\", pid AS \"PID\", cpu_pct AS \"CPU\", memory_mb AS \"RAM\", threads AS \"Hilos\" FROM monitoring.process_sample WHERE sampled_at = (SELECT max(sampled_at) FROM monitoring.process_sample) ORDER BY memory_mb DESC" } ],
+        "options": { "showHeader": true, "sortBy": [ { "displayName": "RAM", "desc": true } ] },
+        "fieldConfig": { "defaults": {}, "overrides": [
+          { "matcher": { "id": "byName", "options": "CPU" }, "properties": [ { "id": "unit", "value": "percent" }, { "id": "decimals", "value": 2 } ] },
+          { "matcher": { "id": "byName", "options": "RAM" }, "properties": [ { "id": "unit", "value": "decmbytes" }, { "id": "decimals", "value": 0 }, { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "basic" } }, { "id": "max", "value": 4000 } ] }
+        ] }
+      },
+
+      { "type": "row", "title": "Memoria JVM", "id": 20, "collapsed": false, "gridPos": { "x": 0, "y": 23, "w": 24, "h": 1 }, "panels": [] },
+      {
+        "type": "timeseries", "title": "Heap usado por JVM", "id": 21, "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+        "description": "jcmd GC.heap_info. Los dientes de sierra son normales (GC); una base que sube sin parar apunta a una fuga.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(sampled_at, $__interval), component AS metric, avg(heap_used_mb) AS value FROM monitoring.jvm_sample WHERE $__timeFilter(sampled_at) GROUP BY 1, 2 ORDER BY 1" } ],
+        "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi" } },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "min": 0, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1 } }, "overrides": [] }
+      },
+      {
+        "type": "timeseries", "title": "Heap comprometido por JVM", "id": 22, "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+        "description": "Memoria que la JVM ha reservado al sistema para el heap.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(sampled_at, $__interval), component AS metric, avg(heap_committed_mb) AS value FROM monitoring.jvm_sample WHERE $__timeFilter(sampled_at) GROUP BY 1, 2 ORDER BY 1" } ],
+        "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi" } },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "min": 0, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1 } }, "overrides": [] }
+      },
+
+      { "type": "row", "title": "Base de datos", "id": 30, "collapsed": false, "gridPos": { "x": 0, "y": 32, "w": 24, "h": 1 }, "panels": [] },
+      {
+        "type": "bargauge", "title": "Tamaño por esquema", "id": 31, "gridPos": { "x": 0, "y": 33, "w": 8, "h": 9 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT n.nspname AS esquema, sum(pg_total_relation_size(c.oid)) / 1048576.0 AS mb FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r', 'm', 'p') AND n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname NOT LIKE 'pg_toast%' GROUP BY 1 ORDER BY 2 DESC" } ],
+        "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true }, "showUnfilled": true },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "decimals": 1, "min": 0, "color": { "mode": "continuous-BlPu" } }, "overrides": [] }
+      },
+      {
+        "type": "timeseries", "title": "Crecimiento de la base", "id": 32, "gridPos": { "x": 8, "y": 33, "w": 8, "h": 9 },
+        "description": "Muestra cada 5 minutos. (total) es pg_database_size; el resto, la suma de tablas e índices de cada esquema.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(sampled_at, '5m'), schema_name AS metric, max(size_mb) AS value FROM monitoring.db_size_sample WHERE $__timeFilter(sampled_at) GROUP BY 1, 2 ORDER BY 1" } ],
+        "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "custom": { "drawStyle": "line", "lineWidth": 1, "spanNulls": true } }, "overrides": [] }
+      },
+      {
+        "type": "piechart", "title": "Conexiones por estado", "id": 33, "gridPos": { "x": 16, "y": 33, "w": 8, "h": 9 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT coalesce(application_name, '') || ' · ' || coalesce(state, '?') AS estado, count(*) AS conexiones FROM pg_stat_activity WHERE backend_type = 'client backend' GROUP BY 1 ORDER BY 2 DESC" } ],
+        "options": { "pieType": "donut", "legend": { "displayMode": "table", "placement": "right", "values": ["value"] }, "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true } },
+        "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      },
+      {
+        "type": "table", "title": "Consultas en curso (más largas primero)", "id": 34, "gridPos": { "x": 0, "y": 42, "w": 24, "h": 7 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT pid AS \"PID\", application_name AS \"Aplicación\", state AS \"Estado\", extract(epoch FROM now() - query_start) AS \"Duración\", wait_event_type AS \"Espera\", left(query, 200) AS \"Consulta\" FROM pg_stat_activity WHERE backend_type = 'client backend' AND state <> 'idle' AND pid <> pg_backend_pid() ORDER BY query_start" } ],
+        "options": { "showHeader": true },
+        "fieldConfig": { "defaults": {}, "overrides": [ { "matcher": { "id": "byName", "options": "Duración" }, "properties": [ { "id": "unit", "value": "s" }, { "id": "decimals", "value": 1 } ] } ] }
+      },
+
+      { "type": "row", "title": "Disco y temporales", "id": 40, "collapsed": false, "gridPos": { "x": 0, "y": 49, "w": 24, "h": 1 }, "panels": [] },
+      {
+        "type": "bargauge", "title": "Espacio ocupado (última medición)", "id": 41, "gridPos": { "x": 0, "y": 50, "w": 10, "h": 9 },
+        "description": "Se mide cada 10 minutos. temp incluye scoped_dir. docker-vhdx es el disco de la VM de Docker.",
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "table",
+          "rawSql": "SELECT DISTINCT ON (label) label AS carpeta, size_mb AS mb FROM monitoring.disk_sample ORDER BY label, sampled_at DESC" } ],
+        "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true }, "showUnfilled": true },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "decimals": 0, "min": 0, "color": { "mode": "continuous-GrYlRd" } }, "overrides": [] }
+      },
+      {
+        "type": "timeseries", "title": "Evolución del espacio en disco", "id": 42, "gridPos": { "x": 10, "y": 50, "w": 14, "h": 9 },
+        "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" },
+        "targets": [ { "refId": "A", "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres-results" }, "rawQuery": true, "editorMode": "code", "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(sampled_at, '10m'), label AS metric, max(size_mb) AS value FROM monitoring.disk_sample WHERE $__timeFilter(sampled_at) GROUP BY 1, 2 ORDER BY 1" } ],
+        "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "delta"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+        "fieldConfig": { "defaults": { "unit": "decmbytes", "custom": { "drawStyle": "line", "lineWidth": 1, "spanNulls": true } }, "overrides": [] }
+      }
+    ]
+  },
+  "overwrite": true,
+  "message": "Dashboard de consumo de recursos"
+}
