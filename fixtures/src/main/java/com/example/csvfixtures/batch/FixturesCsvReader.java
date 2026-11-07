@@ -3,7 +3,16 @@ import java.io.IOException; import java.nio.file.Path; import java.util.Iterator
 public class FixturesCsvReader extends AbstractItemCountingItemStreamItemReader<FixtureRow> {
     private final CsvInput input; private final String path; private final String checksum; private final long maxRows; private CSVParser parser; private Iterator<CSVRecord> records; private String country; private String competition; private long observedRows;
     public FixturesCsvReader(CsvInput input, String path, String checksum, long maxRows) { this.input = input; this.path = path; this.checksum = checksum; this.maxRows = maxRows; setName("fixturesCsvReader"); }
-    @Override protected void doOpen() throws IOException { Path real = input.validate(path); if (!checksum.equals(CsvInput.checksum(real))) throw new IllegalArgumentException("CSV changed since job launch"); String name = real.getFileName().toString().replaceFirst("(?i)\\.csv$", ""); String[] p = name.split("_"); if (p.length >= 4 && p[1].matches("\\d{14}")) { country = p[2]; competition = String.join("_", java.util.Arrays.copyOfRange(p, 3, p.length)); } else { country = p[1]; competition = String.join("_", java.util.Arrays.copyOfRange(p, 2, p.length)); } parser = CsvInput.open(real); records = parser.iterator(); }
+    // Mapa de slug de URL de Flashscore -> competicion canonica (ver LIGAS_BASKET.json).
+    // Las FIXTURES llegan con el slug de la URL (acb, super-league); RESULTS ya usa el
+    // canonico. Se normaliza aqui para que ambas secciones coincidan (plan 5.1/5.4).
+    private static final java.util.Map<String,String> CANONICAL_COMPETITION = java.util.Map.of(
+        "acb", "liga-endesa",
+        "super-league", "winner-league");
+    static String canonicalCompetition(String competition) {
+        return competition == null ? null : CANONICAL_COMPETITION.getOrDefault(competition.toLowerCase(java.util.Locale.ROOT), competition);
+    }
+    @Override protected void doOpen() throws IOException { Path real = input.validate(path); if (!checksum.equals(CsvInput.checksum(real))) throw new IllegalArgumentException("CSV changed since job launch"); String name = real.getFileName().toString().replaceFirst("(?i)\\.csv$", ""); String[] p = name.split("_"); if (p.length >= 4 && p[1].matches("\\d{14}")) { country = p[2]; competition = String.join("_", java.util.Arrays.copyOfRange(p, 3, p.length)); } else { country = p[1]; competition = String.join("_", java.util.Arrays.copyOfRange(p, 2, p.length)); } competition = canonicalCompetition(competition); parser = CsvInput.open(real); records = parser.iterator(); }
     @Override protected FixtureRow doRead() { while (records.hasNext()) { CSVRecord record = records.next(); if (++observedRows > maxRows) throw new IllegalArgumentException("FIXTURES row count exceeds configured limit " + maxRows); FixtureRow row = FixtureRow.parse(record, country, competition); if (row != null) return row; } return null; }
     @Override protected void jumpToItem(int count) { for (int i = 0; i < count; i++) { if (!records.hasNext()) throw new IllegalArgumentException("CSV is shorter than its checkpoint"); records.next(); } }
     @Override protected void doClose() throws IOException { if (parser != null) parser.close(); }
