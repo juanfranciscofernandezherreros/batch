@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Compila antes de permitir el push. Activar una vez: git config core.hooksPath .githooks
+set -e
+echo "[pre-push] compilando (mvn -q -DskipTests package)..."
+mvn -q -DskipTests package
+echo "[pre-push] OK"
