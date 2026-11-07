@@ -2,7 +2,10 @@ package com.example.csvstatsmatchbatch.batch;
 import org.apache.commons.csv.CSVRecord;
 public record ResultRow(long recordNumber, String matchId, String[] values) {
     static ResultRow fromScoreSummary(CSVRecord home, CSVRecord away, String matchId) {
-        if (home.size() != 5 || away.size() != 5) throw new IllegalArgumentException("SCORE_SUMMARY rows require 5 columns");
+        // >= 15: las 15 columnas originales mantienen su posicion; las columnas
+        // de identidad (eventTime/eventDatetime/.../country/competition) son extra
+        // al final y pueden faltar en ficheros antiguos.
+        if (home.size() < 15 || away.size() < 15) throw new IllegalArgumentException("SCORE_SUMMARY rows require at least 15 columns");
         if (!"home".equalsIgnoreCase(home.get(1)) || !"away".equalsIgnoreCase(away.get(1)))
             throw new IllegalArgumentException("SCORE_SUMMARY must contain one home row followed by one away row");
         String rowMatchId = clean(home.get(0));
@@ -13,12 +16,22 @@ public record ResultRow(long recordNumber, String matchId, String[] values) {
         String effectiveMatchId = "all".equalsIgnoreCase(matchId) ? rowMatchId : matchId;
         if (!effectiveMatchId.equals(rowMatchId))
             throw new IllegalArgumentException("SCORE_SUMMARY row match_id does not match the filename match_id");
-        String[] v = new String[7];
+        String[] v = new String[21];
         v[1] = clean(home.get(2)); v[2] = clean(home.get(3));
         v[3] = clean(away.get(2)); v[4] = clean(away.get(3));
         v[5] = clean(home.get(4)); v[6] = clean(away.get(4));
+        for (int period = 1; period <= 5; period++) {
+            v[6 + period] = clean(home.get(4 + period));
+            v[11 + period] = clean(away.get(9 + period));
+        }
+        // Identidad del partido (columnas extra; indices 15,16,21,22 del CSV).
+        v[17] = at(home, 15); // eventTime
+        v[18] = at(home, 16); // eventDatetime
+        v[19] = at(home, 21); // country
+        v[20] = at(home, 22); // competition
         return new ResultRow(home.getRecordNumber(), effectiveMatchId, v);
     }
     private static String clean(String value) { return value == null || value.isBlank() ? null : value; }
-    static ResultRow parse(CSVRecord r, String matchId) { if (r.size()!=7) throw new IllegalArgumentException("MATCH_SUMMARY requires 7 columns"); String[] v=new String[7]; for(int i=0;i<7;i++) v[i]=r.get(i).isBlank()?null:r.get(i); return new ResultRow(r.getRecordNumber(),matchId,v); }
+    private static String at(CSVRecord r, int index) { return index < r.size() ? clean(r.get(index)) : null; }
+    static ResultRow parse(CSVRecord r, String matchId) { if (r.size()!=7) throw new IllegalArgumentException("MATCH_SUMMARY requires 7 columns"); String[] v=new String[21]; for(int i=0;i<7;i++) v[i]=r.get(i).isBlank()?null:r.get(i); return new ResultRow(r.getRecordNumber(),matchId,v); }
 }
