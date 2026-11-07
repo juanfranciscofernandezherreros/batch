@@ -1,6 +1,7 @@
 package com.example.csvbatchlauncher;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
@@ -13,5 +14,11 @@ class BatchTypeTest {
         assertEquals(BatchType.STATS_PLAYER, BatchType.from(Path.of("PLAYER_STATS_20261014120000_m1.csv")).orElseThrow());
         assertEquals(BatchType.POINT_BY_POINT, BatchType.from(Path.of("POINT_BY_POINT_20261014120000_m1.csv")).orElseThrow());
         assertEquals(java.util.Optional.empty(), BatchType.from(Path.of("unknown.csv")));
+    }
+
+    @Test void noDatasetRequiresResultsToBeImportedFirst() {
+        for (BatchType type : BatchType.values()) {
+            assertFalse(type.requiresResultsMatch(), type + " must not require RESULTS");
+        }
     }
 }

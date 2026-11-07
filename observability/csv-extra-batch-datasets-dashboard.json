@@ -1,0 +1,15 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "csv-extra-batch-datasets",
+    "title": "CSV Extra Batch - Flujos por Dataset",
+    "tags": ["basketball", "csv", "datasets"],
+    "timezone": "browser", "schemaVersion": 41, "version": 1, "refresh": "10s",
+    "time": {"from": "now-7d", "to": "now"},
+    "panels": [
+      {"id": 1, "type": "table", "title": "Estado actual de cada flujo", "gridPos": {"h": 10, "w": 24, "x": 0, "y": 0}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "WITH types(batch_type) AS (VALUES ('results'), ('fixtures'), ('match-summary'), ('team-stats'), ('stats-player'), ('point-by-point'), ('match-details'), ('h2h'), ('odds')), latest AS (SELECT DISTINCT ON (batch_type) batch_type, status, created_at, finished_at, attempts, error FROM public.batch_launch_request ORDER BY batch_type, created_at DESC) SELECT types.batch_type AS \"Flujo\", COALESCE(latest.status, 'SIN EJECUCIONES') AS \"Estado\", latest.created_at AS \"Último envío\", latest.finished_at AS \"Fin\", latest.attempts AS \"Intentos\", latest.error AS \"Error\" FROM types LEFT JOIN latest USING (batch_type) ORDER BY 1"}], "fieldConfig": {"defaults": {}, "overrides": []}, "options": {"cellHeight": "sm", "showHeader": true}},
+      {"id": 2, "type": "bargauge", "title": "Completados por flujo (periodo seleccionado)", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "SELECT batch_type AS flujo, count(*) AS completados FROM public.batch_launch_request WHERE status = 'COMPLETED' AND $__timeFilter(finished_at) GROUP BY batch_type ORDER BY completados DESC"}], "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []}, "options": {"displayMode": "gradient", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true}},
+      {"id": 3, "type": "timeseries", "title": "Duración por flujo", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "time_series", "rawQuery": true, "rawSql": "SELECT finished_at AS time, batch_type AS metric, extract(epoch FROM (finished_at - started_at)) AS value FROM public.batch_launch_request WHERE status = 'COMPLETED' AND started_at IS NOT NULL AND $__timeFilter(finished_at) ORDER BY 1"}], "fieldConfig": {"defaults": {"unit": "s", "color": {"mode": "palette-classic"}}, "overrides": []}, "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}}
+    ]
+  }, "overwrite": true, "message": "Flujos por dataset de csv-extra-batch"
+}

@@ -1,0 +1,16 @@
+spring:
+  application.name: fixtures-processing-audit
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+server:
+  port: ${FIXTURES_PROCESSING_AUDIT_PORT:8090}
+app:
+  audit:
+    enabled: ${FIXTURES_PROCESSING_AUDIT_ENABLED:true}
+    run-once: ${FIXTURES_PROCESSING_AUDIT_RUN_ONCE:false}
+    refresh-interval-ms: ${FIXTURES_PROCESSING_AUDIT_REFRESH_INTERVAL_MS:5000}
+    timezone: ${FIXTURES_PROCESSING_AUDIT_TIMEZONE:Europe/Madrid}
+    report-directory: ${FIXTURES_PROCESSING_AUDIT_REPORT_DIRECTORY:C:/data/basketball/reports/orchestrator}
+    league-catalog: ${FIXTURES_PROCESSING_AUDIT_LEAGUE_CATALOG:C:/Users/juanf/Desktop/BALONCESTO_AUTOMATIZADO/LIGAS_BASKET.json}

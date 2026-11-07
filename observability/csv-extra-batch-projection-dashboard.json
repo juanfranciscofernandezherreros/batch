@@ -1,0 +1,17 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "csv-extra-batch-projection",
+    "title": "CSV Extra Batch - PostgreSQL a Web",
+    "tags": ["basketball", "projector", "mongodb", "api", "web"],
+    "timezone": "browser", "schemaVersion": 41, "version": 1, "refresh": "10s",
+    "time": {"from": "now-6h", "to": "now"},
+    "panels": [
+      {"id": 1, "type": "stat", "title": "PostgreSQL", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}, "datasource": {"type": "prometheus", "uid": "prometheus-local"}, "targets": [{"refId": "A", "expr": "pg_up", "instant": true, "range": false}], "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"color": "red", "text": "DOWN"}, "1": {"color": "green", "text": "UP"}}, "type": "value"}]}, "overrides": []}, "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}},
+      {"id": 2, "type": "stat", "title": "MongoDB", "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0}, "datasource": {"type": "prometheus", "uid": "prometheus-local"}, "targets": [{"refId": "A", "expr": "mongodb_up", "instant": true, "range": false}], "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"color": "red", "text": "DOWN"}, "1": {"color": "green", "text": "UP"}}, "type": "value"}]}, "overrides": []}, "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}},
+      {"id": 3, "type": "state-timeline", "title": "API y Web", "gridPos": {"h": 5, "w": 12, "x": 12, "y": 0}, "datasource": {"type": "prometheus", "uid": "prometheus-local"}, "targets": [{"refId": "A", "expr": "probe_success", "legendFormat": "{{instance}}", "range": true}], "fieldConfig": {"defaults": {"mappings": [{"options": {"0": {"color": "red", "text": "DOWN"}, "1": {"color": "green", "text": "UP"}}, "type": "value"}]}, "overrides": []}, "options": {"alignValue": "left", "mergeValues": true, "showValue": "always"}},
+      {"id": 4, "type": "timeseries", "title": "CPU de projector, API y web", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5}, "datasource": {"type": "prometheus", "uid": "prometheus-local"}, "targets": [{"refId": "A", "expr": "sum by (container_label_com_docker_compose_service) (rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"local-validation\",container_label_com_docker_compose_service=~\"basketball-match-projector|basketball-match-api|basketball-match-web\"}[1m]))", "legendFormat": "{{container_label_com_docker_compose_service}}", "range": true}], "fieldConfig": {"defaults": {"unit": "cores"}, "overrides": []}, "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}},
+      {"id": 5, "type": "logs", "title": "Errores de projector, API y web", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5}, "datasource": {"type": "loki", "uid": "loki-local"}, "targets": [{"refId": "A", "expr": "{project=\"local-validation\",service=~\"basketball-match-projector|basketball-match-api|basketball-match-web\"} |~ \"(?i)(error|exception|fatal|failed)\"", "queryType": "range"}], "options": {"dedupStrategy": "none", "enableLogDetails": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true}}
+    ]
+  }, "overwrite": true, "message": "Trazabilidad desde PostgreSQL hasta la web"
+}

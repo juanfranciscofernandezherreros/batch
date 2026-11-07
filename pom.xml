@@ -68,5 +68,7 @@
     <module>stats-player</module>
     <module>point-by-point</module>
     <module>launcher</module>
+    <module>fixtures-processing-audit</module>
+    <module>pronostico</module>
   </modules>
 </project>

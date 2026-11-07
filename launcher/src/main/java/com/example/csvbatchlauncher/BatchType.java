@@ -5,8 +5,8 @@ import java.util.Optional;
 import com.example.csvbatchcore.CsvDataset;
 
 public enum BatchType {
-    RESULTS("results", false), FIXTURES("fixtures", false), TEAM_STATS("team-stats", true), MATCH_SUMMARY("match-summary", false),
-    STATS_PLAYER("stats-player", true), POINT_BY_POINT("point-by-point", true), MATCH_DETAILS("match-details", false), H2H("h2h", false), ODDS("odds", false);
+    RESULTS("results", false), FIXTURES("fixtures", false), TEAM_STATS("team-stats", false), MATCH_SUMMARY("match-summary", false),
+    STATS_PLAYER("stats-player", false), POINT_BY_POINT("point-by-point", false), MATCH_DETAILS("match-details", false), H2H("h2h", false), ODDS("odds", false);
     private final String key;
     private final boolean requiresResultsMatch;
     BatchType(String key, boolean requiresResultsMatch) { this.key = key; this.requiresResultsMatch = requiresResultsMatch; }

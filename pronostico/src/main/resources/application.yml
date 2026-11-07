@@ -1,0 +1,36 @@
+server:
+  port: ${PRONOSTICO_PORT:8091}
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/basketball}
+    username: ${DB_USER:test}
+    password: ${DB_PASS:test}
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/basketball}
+article-generator:
+  provider: ${PREDICTION_AI_PROVIDER:ollama}
+  model: ${PREDICTION_OLLAMA_MODEL:qwen2.5:3b}
+  ollama-base-url: ${PREDICTION_OLLAMA_BASE_URL:http://localhost:11434}
+  site: ${PREDICTION_SITE:http://localhost:8083}
+  author-username: ${PREDICTION_AUTHOR:Basketball Forecast}
+  language: es
+  max-article-tokens: 3500
+  temperature-article: 0.2
+  generation-system-msg: >-
+    Eres analista de baloncesto. Utiliza exclusivamente los datos de la entrada. No inventes
+    lesiones, cuotas, resultados, estadísticas, partidos ni pronósticos. No cambies ni sugieras
+    selecciones o porcentajes; el módulo los calcula y añade por separado. Devuelve solo JSON
+    válido con title, summary, body HTML y keywords. Redacta en español, con lenguaje claro,
+    identificando las limitaciones y la falta de calibración histórica.
+  generation-prompt-template: |-
+    Redacta una previa editorial concisa de la siguiente jornada de EuroLeague en español.
+    Incluye únicamente el contexto agregado de los equipos que aparece en los datos adjuntos.
+    No hagas pronósticos partido por partido ni recomiendes apuestas: las selecciones y
+    probabilidades se adjuntan después por el sistema. No afirmes que existen datos de lesiones
+    o cuotas. Si faltan variables, dilo claramente.
+    Categoría: {parentName}. Jornada: {subcatName}. {topic}
+    Devuelve JSON con title, summary, body (HTML semántico) y keywords.
+app:
+  pronostico:
+    run-on-startup: ${PRONOSTICO_RUN_ON_STARTUP:true}

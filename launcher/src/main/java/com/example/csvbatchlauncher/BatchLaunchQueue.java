@@ -43,15 +43,24 @@ public class BatchLaunchQueue {
             String status = readiness.ready() ? "QUEUED" : "BLOCKED";
             String checksum = checksum(normalizedFile);
             String requestId = "csv-sha256-" + checksum;
+            // Un CSV nuevo (otra ruta) con el mismo contenido que uno ya COMPLETED se vuelve a
+            // encolar: si alguien lo reenvia es porque los datos no estan en la BD (borrados o
+            // perdidos despues), y devolver el COMPLETED antiguo dejaba el partido pendiente siempre.
             jdbc.update("""
                     INSERT INTO batch_launch_request(request_id, file_path, checksum, batch_type, status, error)
                     VALUES (?, ?, ?, ?, ?, ?)
                     ON CONFLICT(request_id) DO UPDATE SET
                         file_path=EXCLUDED.file_path,
                         batch_type=EXCLUDED.batch_type,
-                        status=CASE WHEN batch_launch_request.status IN ('FAILED', 'BLOCKED') THEN EXCLUDED.status ELSE batch_launch_request.status END,
-                        error=CASE WHEN batch_launch_request.status IN ('FAILED', 'BLOCKED') THEN EXCLUDED.error ELSE batch_launch_request.error END,
-                        finished_at=CASE WHEN batch_launch_request.status='FAILED' THEN NULL ELSE batch_launch_request.finished_at END
+                        status=CASE WHEN batch_launch_request.status IN ('FAILED', 'BLOCKED')
+                                      OR (batch_launch_request.status='COMPLETED' AND batch_launch_request.file_path<>EXCLUDED.file_path)
+                                    THEN EXCLUDED.status ELSE batch_launch_request.status END,
+                        error=CASE WHEN batch_launch_request.status IN ('FAILED', 'BLOCKED')
+                                     OR (batch_launch_request.status='COMPLETED' AND batch_launch_request.file_path<>EXCLUDED.file_path)
+                                   THEN EXCLUDED.error ELSE batch_launch_request.error END,
+                        finished_at=CASE WHEN batch_launch_request.status='FAILED'
+                                           OR (batch_launch_request.status='COMPLETED' AND batch_launch_request.file_path<>EXCLUDED.file_path)
+                                         THEN NULL ELSE batch_launch_request.finished_at END
                     """, requestId, normalizedFile.toString(), checksum, type.key(), status, readiness.reason());
             return status(requestId);
         } catch (IOException exception) {

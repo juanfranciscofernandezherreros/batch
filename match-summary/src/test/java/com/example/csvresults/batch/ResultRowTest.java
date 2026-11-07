@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 class ResultRowTest {
     private static org.apache.commons.csv.CSVRecord[] scoreRecords(String firstId, String secondId) throws Exception {
         try (var parser = CSVFormat.DEFAULT.parse(new StringReader(
-                firstId + ",home,Home,https://example.com/home,80\n"
-                        + secondId + ",away,Away,https://example.com/away,75\n"))) {
+                firstId + ",home,Home,https://example.com/home,80,20,21,19,20,, ,,,,\n"
+                        + secondId + ",away,Away,https://example.com/away,75,,,,,,18,20,17,20,\n"))) {
             return parser.getRecords().toArray(org.apache.commons.csv.CSVRecord[]::new);
         }
     }
@@ -19,7 +19,10 @@ class ResultRowTest {
     @Test
     void usesRowMatchIdForConsolidatedScoreSummary() throws Exception {
         var records = scoreRecords("QFO2xa3N", "QFO2xa3N");
-        assertEquals("QFO2xa3N", ResultRow.fromScoreSummary(records[0], records[1], "all").matchId());
+        var result = ResultRow.fromScoreSummary(records[0], records[1], "all");
+        assertEquals("QFO2xa3N", result.matchId());
+        assertEquals("20", result.values()[7]);
+        assertEquals("18", result.values()[12]);
     }
 
     @Test

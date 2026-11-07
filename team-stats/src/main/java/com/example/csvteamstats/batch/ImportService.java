@@ -27,7 +27,7 @@ public class ImportService {
         if (event.isBlank() || event.length() > 255) throw new IllegalArgumentException("sourceEventId must contain 1..255 characters");
         // Stable identity: retries do not create a fresh job and duplicate committed chunks.
         var parameters = new JobParametersBuilder().addString("sourceEventId", event)
-                .addString("file", path.toString(), false).addString("checksum", hash, false)
+                .addString("file", path.toString(), true).addString("checksum", hash, false)
                 .addString("sourceName", sourceName, false).addLong("sourcePartition", (long) sourcePartition, false)
                 .addLong("sourceOffset", sourceOffset, false).toJobParameters();
         var previous = repository.getLastJobExecution(job.getName(), parameters);

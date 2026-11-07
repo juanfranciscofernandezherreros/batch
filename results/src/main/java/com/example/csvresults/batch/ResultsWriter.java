@@ -7,12 +7,16 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 public class ResultsWriter implements ItemWriter<ResultRow> {
+    // Un CSV sin hora (p. ej. el que publica el pipeline por partido) no debe borrar la que ya habia:
+    // event_time y event_datetime solo se sobrescriben con valores no vacios.
     static final String UPSERT = """
         INSERT INTO results (match_id, source_event_id, event_time, event_datetime, home_team, away_team, home_score, away_score,
           home_score1, home_score2, home_score3, home_score4, home_score5, away_score1, away_score2, away_score3,
           away_score4, away_score5, country, competition, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT (match_id) DO UPDATE SET source_event_id=EXCLUDED.source_event_id, event_time=EXCLUDED.event_time, event_datetime=EXCLUDED.event_datetime,
+        ON CONFLICT (match_id) DO UPDATE SET source_event_id=EXCLUDED.source_event_id,
+          event_time=COALESCE(EXCLUDED.event_time, results.event_time),
+          event_datetime=COALESCE(EXCLUDED.event_datetime, results.event_datetime),
           home_team=EXCLUDED.home_team, away_team=EXCLUDED.away_team, home_score=EXCLUDED.home_score, away_score=EXCLUDED.away_score,
           home_score1=EXCLUDED.home_score1, home_score2=EXCLUDED.home_score2, home_score3=EXCLUDED.home_score3,
           home_score4=EXCLUDED.home_score4, home_score5=EXCLUDED.home_score5, away_score1=EXCLUDED.away_score1,

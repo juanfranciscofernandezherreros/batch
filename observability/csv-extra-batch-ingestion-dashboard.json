@@ -1,0 +1,23 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "csv-extra-batch-ingestion",
+    "title": "CSV Extra Batch - Ingesta a PostgreSQL",
+    "tags": ["basketball", "csv", "postgresql", "ingestion"],
+    "timezone": "browser",
+    "schemaVersion": 41,
+    "version": 1,
+    "refresh": "10s",
+    "time": {"from": "now-24h", "to": "now"},
+    "panels": [
+      {"id": 1, "type": "stat", "title": "Pendientes o ejecutándose", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS active FROM public.batch_launch_request WHERE status IN ('QUEUED', 'RUNNING', 'BLOCKED')"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 10}]}}, "overrides": []}, "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}},
+      {"id": 2, "type": "stat", "title": "Completados (24 h)", "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS completed FROM public.batch_launch_request WHERE status = 'COMPLETED' AND finished_at >= now() - interval '24 hours'"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []}, "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}},
+      {"id": 3, "type": "stat", "title": "Fallidos (24 h)", "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS failed FROM public.batch_launch_request WHERE status = 'FAILED' AND finished_at >= now() - interval '24 hours'"}], "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []}, "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}},
+      {"id": 4, "type": "stat", "title": "Duración media (24 h)", "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(avg(extract(epoch FROM (finished_at - started_at))), 0) AS seconds FROM public.batch_launch_request WHERE status = 'COMPLETED' AND started_at IS NOT NULL AND finished_at >= now() - interval '24 hours'"}], "fieldConfig": {"defaults": {"unit": "s", "decimals": 1}, "overrides": []}, "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}},
+      {"id": 5, "type": "timeseries", "title": "Lanzamientos por estado", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "time_series", "rawQuery": true, "rawSql": "SELECT date_trunc('minute', created_at) AS time, status AS metric, count(*) AS value FROM public.batch_launch_request WHERE $__timeFilter(created_at) GROUP BY 1, 2 ORDER BY 1"}], "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []}, "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}},
+      {"id": 6, "type": "table", "title": "Últimos fallos o bloqueos", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5}, "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres-results"}, "targets": [{"refId": "A", "format": "table", "rawQuery": true, "rawSql": "SELECT created_at AS \"Fecha\", batch_type AS \"Dataset\", status AS \"Estado\", attempts AS \"Intentos\", file_path AS \"Archivo\", error AS \"Error\" FROM public.batch_launch_request WHERE status IN ('FAILED', 'BLOCKED') ORDER BY created_at DESC LIMIT 50"}], "fieldConfig": {"defaults": {}, "overrides": []}, "options": {"cellHeight": "sm", "showHeader": true}}
+    ]
+  },
+  "overwrite": true,
+  "message": "Dashboard de ingesta csv-extra-batch"
+}

@@ -16,7 +16,7 @@ public class ImportService {
     public ImportService(CsvInput input, JobLauncher launcher, JobRepository repository, Job job, JdbcTemplate jdbc) { this.input = input; this.launcher = launcher; this.repository = repository; this.job = job; this.jdbc = jdbc; }
     public JobExecution run(String file, String sourceEventId) throws Exception {
         var path = input.validate(file); var hash = CsvInput.checksum(path); var event = sourceEventId == null ? "csv-sha256-" + hash : sourceEventId;
-        var parameters = new JobParametersBuilder().addString("sourceEventId", event).addString("file", path.toString(), false).addString("checksum", hash, false).toJobParameters();
+        var parameters = new JobParametersBuilder().addString("sourceEventId", event).addString("file", path.toString(), true).addString("checksum", hash, false).toJobParameters();
         var previous = repository.getLastJobExecution(job.getName(), parameters);
         if (previous != null && previous.getStatus() == BatchStatus.COMPLETED) { LoggerFactory.getLogger(getClass()).info("event=point_by_point_import_already_completed sourceEventId={}", event); return previous; }
         jdbc.update("INSERT INTO point_by_point_import(event_id,file_path,status,rows_read,rows_persisted,started_at,updated_at) VALUES(?,?, 'RUNNING',0,0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(event_id) DO UPDATE SET status='RUNNING',updated_at=CURRENT_TIMESTAMP", event, path.toString());

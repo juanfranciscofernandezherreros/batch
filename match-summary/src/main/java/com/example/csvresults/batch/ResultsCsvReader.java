@@ -18,10 +18,10 @@ public class ResultsCsvReader extends AbstractItemCountingItemStreamItemReader<R
     @Override protected ResultRow doRead() {
         if (!records.hasNext()) return null;
         CSVRecord first = records.next();
-        if (first.size() != 5) return ResultRow.parse(first, matchId);
+        if (first.size() == 7) return ResultRow.parse(first, matchId);
         if (!records.hasNext()) throw new IllegalArgumentException("SCORE_SUMMARY requires home and away rows");
         return ResultRow.fromScoreSummary(first, records.next(), matchId);
     }
-    @Override protected void jumpToItem(int count) { for (int i = 0; i < count; i++) { if (!records.hasNext()) throw new IllegalArgumentException("CSV is shorter than its checkpoint"); CSVRecord r=records.next(); if (r.size()==5 && records.hasNext()) records.next(); } }
+    @Override protected void jumpToItem(int count) { for (int i = 0; i < count; i++) { if (!records.hasNext()) throw new IllegalArgumentException("CSV is shorter than its checkpoint"); CSVRecord r=records.next(); if (r.size()!=7 && records.hasNext()) records.next(); } }
     @Override protected void doClose() throws IOException { if (parser != null) parser.close(); }
 }
