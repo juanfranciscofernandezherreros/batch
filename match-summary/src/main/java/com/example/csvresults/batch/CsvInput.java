@@ -17,7 +17,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class CsvInput {
     static final List<String> HEADER = List.of("date", "homeName", "homeImage", "awayName", "awayImage", "resultHome", "resultAway");
-    static final List<String> SCORE_HEADER = List.of("match_id", "side", "team", "team_url", "total");
+    static final List<String> SCORE_HEADER = List.of("match_id", "side", "team", "team_url", "total",
+            "home_score1", "home_score2", "home_score3", "home_score4", "home_score5",
+            "away_score1", "away_score2", "away_score3", "away_score4", "away_score5");
     private final SafeCsvPathValidator paths;
     public CsvInput(@Value("${app.csv.allowed-root}") String root) { paths = new SafeCsvPathValidator(root); }
 
@@ -31,7 +33,12 @@ public class CsvInput {
         try (var reader = Files.newBufferedReader(real); var parser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(reader)) {
             var header = parser.getHeaderNames();
             if (!header.isEmpty() && header.getFirst().startsWith("\uFEFF")) header.set(0, header.getFirst().substring(1));
-            if (!HEADER.equals(header) && !SCORE_HEADER.equals(header)) throw new IllegalArgumentException("Invalid MATCH_SUMMARY header");
+            // SCORE_SUMMARY puede traer columnas de identidad extra (eventTime,
+            // eventDatetime, homeTeam, awayTeam, homeScore, awayScore, country,
+            // competition) al final: basta con que empiece por las 15 originales.
+            boolean scoreHeader = header.size() >= SCORE_HEADER.size()
+                    && header.subList(0, SCORE_HEADER.size()).equals(SCORE_HEADER);
+            if (!HEADER.equals(header) && !scoreHeader) throw new IllegalArgumentException("Invalid MATCH_SUMMARY header");
         } catch (IOException e) { throw new IllegalArgumentException("Cannot read CSV", e); }
         return real;
     }
