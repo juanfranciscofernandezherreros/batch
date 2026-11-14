@@ -21,7 +21,7 @@ cd C:\Develop\basketball\csv-extra-batch
 Para ejecutar una auditoría puntual, listar todos los `match_id` pendientes y terminar el proceso:
 
 ```powershell
-& C:\Develop\basketball\1_EJECUTAR\AUDITORIA_FIXTURES.bat
+& C:\Develop\basketball\1_EJECUTAR\basket.cmd auditoria
 ```
 
 El BAT crea también `FIXTURES_PROCESSING_AUDIT_PENDING_<timestamp>.csv` con la lista filtrada.
@@ -29,9 +29,9 @@ El BAT crea también `FIXTURES_PROCESSING_AUDIT_PENDING_<timestamp>.csv` con la 
 Para procesar exclusivamente los partidos de esa lista mediante el pipeline aislado por `match_id`:
 
 ```powershell
-& C:\Develop\basketball\1_EJECUTAR\MATCHIDS_PENDIENTES.bat
-& C:\Develop\basketball\1_EJECUTAR\MATCHIDS_PENDIENTES.bat "C:\data\basketball\reports\orchestrator\FIXTURES_PROCESSING_AUDIT_PENDING_<timestamp>.csv"
-& C:\Develop\basketball\1_EJECUTAR\MATCHIDS_PENDIENTES.bat "C:\ruta\pendientes.csv" 10
+& C:\Develop\basketball\1_EJECUTAR\basket.cmd pendientes
+& C:\Develop\basketball\1_EJECUTAR\basket.cmd pendientes "C:\data\basketball\reports\orchestrator\FIXTURES_PROCESSING_AUDIT_PENDING_<timestamp>.csv"
+& C:\Develop\basketball\1_EJECUTAR\basket.cmd pendientes "C:\ruta\pendientes.csv" 10
 ```
 
 El segundo argumento es opcional: `0` (valor predeterminado) procesa todos los partidos; otro valor positivo limita la ejecución. El proceso inicia el runtime, arranca el `csv-batch-launcher` si no está disponible, registra una fila y log por partido y ejecuta una auditoría final.
@@ -47,7 +47,7 @@ Configuración opcional: `FIXTURES_PROCESSING_AUDIT_PORT`, `FIXTURES_PROCESSING_
 Monitor de cola en vivo (servicio en segundo plano y consola visible):
 
 ```bat
-C:\Develop\basketball\1_EJECUTAR\MONITOR_PENDIENTES.bat
+C:\Develop\basketball\1_EJECUTAR\basket.cmd monitor
 ``` 
 
 El servicio se comprueba y, si hace falta, se arranca con `scripts\arranque\ASEGURAR.bat auditoria`; GET http://localhost:8090/fixtures-processing-audit/latest devuelve la cola completa, con refresco cada 5 segundos.
