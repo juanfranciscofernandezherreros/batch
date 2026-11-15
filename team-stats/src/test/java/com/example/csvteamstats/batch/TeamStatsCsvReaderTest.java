@@ -71,6 +71,28 @@ class TeamStatsCsvReaderTest {
         malformed.close();
     }
 
+    @Test void rejectsShiftedRowsWhereMetricIsAValueOrAValueIsALabel() throws Exception {
+        var reader = reader(csv("m,1st Quarter,Scoring,(11/27),Home,40.7%,Away,Field goal %,\n"
+                + "m,1st Quarter,Scoring,59.1%,Home,(13/22),Away,50.0%,\n"
+                + "m,1st Quarter,Scoring,Free throw %,Home,Rebounds,Away,75.0%,\n"
+                + "m,1st Quarter,Scoring,2-point field goal %,Home,85.7% (6/7),Away,45.5% (5/11),\n"
+                + "m,1st Quarter,Other,Assists,Home,4,Away,,\n"));
+        reader.open(new ExecutionContext());
+        assertThat(reader.read().rejection()).contains("metric looks like a value ((11/27))");
+        assertThat(reader.read().rejection()).contains("metric looks like a value (59.1%)");
+        assertThat(reader.read().rejection()).contains("homeValue has no digits (Rebounds)");
+        assertThat(reader.read().rejection()).as("label starting with a digit is valid").isNull();
+        assertThat(reader.read().rejection()).as("null value is valid").isNull();
+        reader.close();
+    }
+
+    @Test void rejectsLabelInAwayValue() throws Exception {
+        var reader = reader(csv("m,1st Quarter,Scoring,Field goal %,Home,40.7%,Away,Rebounds,\n"));
+        reader.open(new ExecutionContext());
+        assertThat(reader.read().rejection()).contains("awayValue has no digits (Rebounds)");
+        reader.close();
+    }
+
     private Path csv(String rows) throws Exception {
         return Files.writeString(root.resolve("stats_all_periods.csv"), String.join(",", CsvInput.HEADER) + "\n" + rows);
     }

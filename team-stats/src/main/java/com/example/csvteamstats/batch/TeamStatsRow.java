@@ -6,6 +6,11 @@ import org.apache.commons.csv.CSVRecord;
 public record TeamStatsRow(long recordNumber, String matchId, String period, String category,
         String metric, String homeTeam, String homeValue, String awayTeam, String awayValue,
         String sourceUrl) {
+    /** A number followed by % or /, optionally in parentheses: "51.4%", "(38/72)". Never a real label. */
+    private static final java.util.regex.Pattern VALUE_LIKE_METRIC =
+            java.util.regex.Pattern.compile("^\\(?[0-9]+(\\.[0-9]+)?[%/]");
+    private static final java.util.regex.Pattern DIGIT = java.util.regex.Pattern.compile("[0-9]");
+
     static TeamStatsRow parse(CSVRecord record) {
         if (record.size() != 9) {
             throw new IllegalArgumentException("Invalid TEAM_STATS column count recordNumber=" + record.getRecordNumber());
@@ -38,7 +43,24 @@ public record TeamStatsRow(long recordNumber, String matchId, String period, Str
                         + " recordNumber=" + recordNumber;
             }
         }
+        // The legacy scraper shifted columns: the value landed in metric and the label in a value.
+        boolean isMetricActuallyAValue = VALUE_LIKE_METRIC.matcher(metric).find();
+        if (isMetricActuallyAValue) {
+            return "metric looks like a value (" + metric + ") recordNumber=" + recordNumber;
+        }
+        boolean isHomeValueALabel = isNonNumericValue(homeValue);
+        if (isHomeValueALabel) {
+            return "homeValue has no digits (" + homeValue + ") recordNumber=" + recordNumber;
+        }
+        boolean isAwayValueALabel = isNonNumericValue(awayValue);
+        if (isAwayValueALabel) {
+            return "awayValue has no digits (" + awayValue + ") recordNumber=" + recordNumber;
+        }
         return null;
+    }
+
+    private static boolean isNonNumericValue(String value) {
+        return value != null && !DIGIT.matcher(value).find();
     }
 
     public record NaturalKey(String matchId, String period, String category, String metric) {}
