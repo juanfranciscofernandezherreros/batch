@@ -104,7 +104,7 @@
             "rawQuery": true,
             "editorMode": "code",
             "format": "table",
-            "rawSql": "SELECT extract(epoch FROM max(generado)) * 1000 AS ultimo FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED'"
+            "rawSql": "SELECT extract(epoch FROM generado) * 1000 AS ultimo FROM public.v_csv_generados WHERE ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) AND estado = 'COMPLETED' ORDER BY generado DESC LIMIT 1"
           }
         ],
         "options": {
