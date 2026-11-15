@@ -41,6 +41,30 @@ public class BatchConfiguration {
                 .reader(reader).writer(writer).build();
     }
 
+    /**
+     * Replaces the match instead of merging into it: once the CSV is fully written, rows of the same
+     * match and period that this import did not write are stale leftovers of an earlier import
+     * (the upsert only overwrites rows with the same natural key). Periods absent from this CSV are kept.
+     */
+    static final String DELETE_STALE_ROWS = """
+            DELETE FROM team_stats stale
+            WHERE stale.source_event_id <> ?
+              AND EXISTS (SELECT 1 FROM team_stats fresh
+                          WHERE fresh.match_id = stale.match_id AND fresh.period = stale.period
+                            AND fresh.source_event_id = ?)
+            """;
+
+    @Bean
+    Step replaceStaleRows(JobRepository repository, PlatformTransactionManager transactions, JdbcTemplate jdbc) {
+        return new StepBuilder("replaceStaleRows", repository).tasklet((contribution, context) -> {
+            String event = contribution.getStepExecution().getJobParameters().getString("sourceEventId");
+            int deleted = jdbc.update(DELETE_STALE_ROWS, event, event);
+            LoggerFactory.getLogger("TeamStatsOutcome").info(
+                    "event=team_stats_stale_rows_replaced sourceEventId={} deletedRecords={}", event, deleted);
+            return RepeatStatus.FINISHED;
+        }, transactions).build();
+    }
+
     @Bean
     Step publishOutcomes(JobRepository repository, PlatformTransactionManager transactions,
             JdbcTemplate jdbc, OutcomePublisher publisher) {
@@ -59,8 +83,9 @@ public class BatchConfiguration {
     }
 
     @Bean
-    Job teamStatsJob(JobRepository repository, Step importTeamStats, Step publishOutcomes) {
-        return new JobBuilder("teamStatsImport", repository).start(importTeamStats).next(publishOutcomes).build();
+    Job teamStatsJob(JobRepository repository, Step importTeamStats, Step replaceStaleRows, Step publishOutcomes) {
+        return new JobBuilder("teamStatsImport", repository).start(importTeamStats).next(replaceStaleRows)
+                .next(publishOutcomes).build();
     }
 
     @Bean

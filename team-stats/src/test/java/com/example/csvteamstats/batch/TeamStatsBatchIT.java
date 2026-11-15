@@ -53,6 +53,30 @@ class TeamStatsBatchIT {
         assertThat(jdbc.queryForObject("SELECT updated_at > created_at FROM team_stats WHERE match_id=?", Boolean.class, match)).isTrue();
     }
 
+    @Test void reimportReplacesStaleRowsOfTheSamePeriodsAndKeepsOtherPeriods() throws Exception {
+        String match = "replace-" + UUID.randomUUID();
+        // Legacy import: shifted rows were accepted before validation existed, so seed them directly.
+        for (String[] legacy : new String[][] {{"Q1", "Scoring", "(11/27)"}, {"Q1", "Scoring", "Total rebounds"},
+                {"Q1", "Other", "Assists"}, {"Q9", "Scoring", "Only in old import"}}) {
+            jdbc.update("""
+                    INSERT INTO team_stats (match_id, period, category, metric, home_team, home_value,
+                        away_team, away_value, source_event_id) VALUES (?, ?, ?, ?, 'Home', '1', 'Away', '1', 'legacy')
+                    """, match, legacy[0], legacy[1], legacy[2]);
+        }
+        Path file = csv(match, match + ",Q1,Scoring,Field goal %,Home,40.7% (11/27),Away,50.0% (8/16),\n"
+                + match + ",Q1,Rebounds,Total rebounds,Home,8,Away,13,\n"
+                + match + ",Q1,Other,Assists,Home,8,Away,9,\n");
+        imports.run(file.toString(), "fresh-" + match, "csv", -1, -1);
+        assertThat(jdbc.queryForList("SELECT category || '/' || metric FROM team_stats WHERE match_id=? AND period='Q1' ORDER BY 1",
+                String.class, match)).containsExactly("Other/Assists", "Rebounds/Total rebounds", "Scoring/Field goal %");
+        assertThat(jdbc.queryForObject("SELECT home_value FROM team_stats WHERE match_id=? AND metric='Assists'", String.class, match))
+                .isEqualTo("8");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM team_stats WHERE match_id=? AND period='Q9'", Long.class, match))
+                .as("periods absent from the new CSV are kept").isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM team_stats WHERE source_event_id='legacy' AND match_id<>?", Long.class, match))
+                .as("other matches are untouched").isZero();
+    }
+
     @Test void resumesAfterDatabaseFailureWithoutRewritingCommittedChunk() throws Exception {
         String match = "restart-" + UUID.randomUUID();
         Path file = csv(match, row(match, "A", "1") + row(match, "B", "2") + row(match, "FAIL", "3"));
@@ -86,7 +110,7 @@ class TeamStatsBatchIT {
     private int runJar(Path file) throws Exception {
         Path log = root.resolve("cli-" + UUID.randomUUID() + ".log");
         var builder = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                "-jar", "target/app.jar", "--file=" + file);
+                "-jar", "target/csv-team-stats-batch.jar", "--file=" + file);
         builder.environment().put("DB_URL", postgres.getJdbcUrl());
         builder.environment().put("DB_USER", postgres.getUsername());
         builder.environment().put("DB_PASS", postgres.getPassword());
