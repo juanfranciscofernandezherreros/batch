@@ -43,6 +43,29 @@ class FixtureProcessingAuditServiceTest {
         assertEquals(List.of(), audit.pendingDatasets());
     }
 
+    @Test void auditsTodaysMatchWhenItAlreadyHasResult() {
+        // Partido de hoy con marcador cargado y sin resumen: debe contar como pendiente.
+        var fixture = new FixtureProcessingAuditService.FixtureRow("m5", "italy", "lega-a",
+                Instant.parse("2026-11-01T10:00:00Z"), "Local", "Visitante", true, false, false, false, false,
+                false, false, false, false);
+
+        var audit = FixtureProcessingAuditService.toAuditRow(fixture, LocalDate.of(2026, 11, 1));
+
+        assertEquals("PENDIENTE", audit.status());
+        assertEquals(List.of("MATCH_SUMMARY", "POINT_BY_POINT", "TEAM_STATS", "PLAYER_STATS"), audit.pendingDatasets());
+    }
+
+    @Test void keepsFutureMatchOutEvenWithResult() {
+        var fixture = new FixtureProcessingAuditService.FixtureRow("m6", "italy", "lega-a",
+                Instant.parse("2026-11-02T10:00:00Z"), "Local", "Visitante", true, false, false, false, false,
+                false, false, false, false);
+
+        var audit = FixtureProcessingAuditService.toAuditRow(fixture, LocalDate.of(2026, 11, 1));
+
+        assertEquals("HOY_O_FUTURO", audit.status());
+        assertEquals(List.of(), audit.pendingDatasets());
+    }
+
     @Test void auditsResultsThatNeverReachedFixturesWithoutDuplicates() {
         String sql = FixtureProcessingAuditService.AUDIT_SQL.replaceAll("\\s+", " ");
 

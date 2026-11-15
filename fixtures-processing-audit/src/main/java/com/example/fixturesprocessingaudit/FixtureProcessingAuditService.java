@@ -234,7 +234,10 @@ public class FixtureProcessingAuditService {
     static AuditRow toAuditRow(FixtureRow row, LocalDate today, ZoneId zoneId) {
         LocalDate matchDate = row.eventDatetime() == null ? null : row.eventDatetime().atZone(zoneId).toLocalDate();
         if (matchDate == null) return new AuditRow(row, null, "SIN_FECHA_AUDITABLE", List.of());
-        if (!matchDate.isBefore(today)) return new AuditRow(row, matchDate, "HOY_O_FUTURO", List.of());
+        // Un partido de hoy con marcador ya ha terminado: se audita como los demás.
+        // Sin marcador, o con fecha futura, sigue fuera hasta que acabe el día.
+        boolean terminadoHoy = matchDate.isEqual(today) && row.resultsPresent();
+        if (!matchDate.isBefore(today) && !terminadoHoy) return new AuditRow(row, matchDate, "HOY_O_FUTURO", List.of());
         List<String> missing = missingDatasets(row);
         return new AuditRow(row, matchDate, missing.isEmpty() ? "COMPLETO" : "PENDIENTE", missing);
     }
