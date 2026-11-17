@@ -17,6 +17,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class CsvInput {
     static final List<String> HEADER = List.of("match_id","Player","Team","PTS","REB","AST","MIN","FGM","FGA","2PM","2PA","3PM","3PA","FTM","FTA","+/-","OR","DR","PF","ST","TO","BS","BA","TFS");
+    /** Las 24 columnas históricas o, desde 2026-11-17, las mismas más player_url al final. */
+    static boolean cabeceraValida(List<String> header) {
+        return HEADER.equals(header)
+                || (header.size() == HEADER.size() + 1 && HEADER.equals(header.subList(0, HEADER.size()))
+                    && "player_url".equals(header.getLast()));
+    }
     private final SafeCsvPathValidator paths;
     public CsvInput(@Value("${app.csv.allowed-root}") String root) { paths = new SafeCsvPathValidator(root); }
 
@@ -30,7 +36,7 @@ public class CsvInput {
         try (var reader = Files.newBufferedReader(real); var parser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get().parse(reader)) {
             var header = parser.getHeaderNames();
             if (!header.isEmpty() && header.getFirst().startsWith("\uFEFF")) header.set(0, header.getFirst().substring(1));
-            if (!HEADER.equals(header)) throw new IllegalArgumentException("Invalid PLAYER_STATS header: expected " + HEADER + " but got " + header);
+            if (!cabeceraValida(header)) throw new IllegalArgumentException("Invalid PLAYER_STATS header: expected " + HEADER + " (optionally + player_url) but got " + header);
         } catch (IOException e) { throw new IllegalArgumentException("Cannot read CSV", e); }
         return real;
     }
