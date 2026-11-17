@@ -94,11 +94,13 @@ public class BatchLaunchQueue {
             return;
         }
         try {
-            boolean completedSuccessfully = executor.execute(request.type(), request.file());
+            BatchProcessExecutor.Resultado resultado = executor.ejecutar(request.type(), request.file());
+            boolean completedSuccessfully = resultado.ok();
             String completedStatus = completedSuccessfully ? "COMPLETED" : "FAILED";
             Integer exitCode = completedSuccessfully ? 0 : 1;
-            jdbc.update("UPDATE batch_launch_request SET status=?, finished_at=CURRENT_TIMESTAMP, exit_code=?, error=NULL WHERE request_id=?",
-                    completedStatus, exitCode, request.requestId());
+            // Si falla, error guarda el motivo real del batch (antes quedaba NULL).
+            jdbc.update("UPDATE batch_launch_request SET status=?, finished_at=CURRENT_TIMESTAMP, exit_code=?, error=? WHERE request_id=?",
+                    completedStatus, exitCode, resultado.motivo(), request.requestId());
         } catch (RuntimeException exception) {
             jdbc.update("UPDATE batch_launch_request SET status='FAILED', finished_at=CURRENT_TIMESTAMP, error=? WHERE request_id=?",
                     exception.toString(), request.requestId());
