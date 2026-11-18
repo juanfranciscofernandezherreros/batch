@@ -629,6 +629,58 @@
         }
       },
       {
+        "id": 14,
+        "type": "stat",
+        "title": "Partidos de ayer",
+        "description": "Partidos de ayer (hora de Madrid) en fixtures: total, completos con los 4 datasets y en extraccion ahora.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 4,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "WITH ayer AS (SELECT f.match_id FROM fixtures.fixtures f WHERE (f.event_datetime AT TIME ZONE 'Europe/Madrid')::date = (now() AT TIME ZONE 'Europe/Madrid')::date - 1 AND ('__all__' IN ($pais) OR f.country IN ($pais)) AND ('__all__' IN ($competicion) OR f.competition IN ($competicion))) SELECT count(*) AS \"Ayer\", count(*) FILTER (WHERE EXISTS (SELECT 1 FROM results.results r WHERE r.match_id = a.match_id) AND EXISTS (SELECT 1 FROM match_summary.match_summary s WHERE s.match_id = a.match_id) AND EXISTS (SELECT 1 FROM point_by_point.point_by_point_event p WHERE p.match_id = a.match_id) AND EXISTS (SELECT 1 FROM team_stats.team_stats t WHERE t.match_id = a.match_id) AND EXISTS (SELECT 1 FROM stats_player.stats_player sp WHERE sp.match_id = a.match_id)) AS \"Completos\", count(*) FILTER (WHERE EXISTS (SELECT 1 FROM public.pipeline_step ps WHERE ps.estado = 'RUNNING' AND ps.started_at > now() - interval '1 hour' AND ps.paso LIKE '% ' || a.match_id)) AS \"Extrayendo\" FROM ayer a"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "orientation": "horizontal",
+          "textMode": "value_and_name",
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "fixed",
+              "fixedColor": "blue"
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
         "id": 12,
         "type": "table",
         "title": "Extrayendo ahora",
@@ -638,9 +690,9 @@
           "uid": "postgres-results"
         },
         "gridPos": {
-          "x": 0,
+          "x": 4,
           "y": 4,
-          "w": 10,
+          "w": 8,
           "h": 8
         },
         "targets": [
@@ -679,9 +731,9 @@
           "uid": "postgres-results"
         },
         "gridPos": {
-          "x": 10,
+          "x": 12,
           "y": 4,
-          "w": 14,
+          "w": 12,
           "h": 8
         },
         "targets": [
