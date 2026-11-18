@@ -629,6 +629,88 @@
         }
       },
       {
+        "id": 12,
+        "type": "table",
+        "title": "Extrayendo ahora",
+        "description": "Partido y dataset que se esta bajando de Flashscore e importando (reextraer, resultados-ayer, orquestador).",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 10,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT liga, paso, started_at AS empezado, round(extract(epoch FROM now() - started_at)) AS segundos FROM public.pipeline_step WHERE estado = 'RUNNING' AND started_at > now() - interval '1 hour' AND ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) ORDER BY started_at DESC"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": true
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
+        "id": 13,
+        "type": "table",
+        "title": "Ultimos pasos (2 h)",
+        "description": "Lo extraido en las ultimas 2 horas: COMPLETED con el CSV o FAILED con el motivo.",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres-results"
+        },
+        "gridPos": {
+          "x": 10,
+          "y": 4,
+          "w": 14,
+          "h": 8
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": {
+              "type": "grafana-postgresql-datasource",
+              "uid": "postgres-results"
+            },
+            "rawQuery": true,
+            "editorMode": "code",
+            "format": "table",
+            "rawSql": "SELECT estado, liga, paso, finished_at AS terminado, round(extract(epoch FROM finished_at - started_at)) AS segundos, detalle FROM public.pipeline_step WHERE estado <> 'RUNNING' AND started_at > now() - interval '2 hours' AND ('__all__' IN ($pais) OR pais IN ($pais)) AND ('__all__' IN ($competicion) OR competicion IN ($competicion)) ORDER BY finished_at DESC NULLS LAST LIMIT 50"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "cellHeight": "sm"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "filterable": true
+            }
+          },
+          "overrides": []
+        }
+      },
+      {
         "type": "barchart",
         "title": "Pendientes por dataset",
         "targets": [
@@ -675,7 +757,7 @@
         "id": 9,
         "gridPos": {
           "x": 0,
-          "y": 4,
+          "y": 12,
           "w": 12,
           "h": 9
         },
@@ -731,7 +813,7 @@
         "id": 10,
         "gridPos": {
           "x": 12,
-          "y": 4,
+          "y": 12,
           "w": 12,
           "h": 9
         },
@@ -889,7 +971,7 @@
         "id": 11,
         "gridPos": {
           "x": 0,
-          "y": 13,
+          "y": 21,
           "w": 24,
           "h": 16
         },
