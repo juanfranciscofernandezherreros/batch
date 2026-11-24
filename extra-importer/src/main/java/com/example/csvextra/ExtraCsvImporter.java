@@ -28,8 +28,35 @@ public class ExtraCsvImporter implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        String fileArgument = args.getOptionValues("file") == null ? null : args.getOptionValues("file").getFirst();
-        if (fileArgument == null || fileArgument.isBlank()) throw new IllegalArgumentException("--file is required");
+        // Varios ficheros en un solo arranque: --file repetido o --files-from=<lista, uno por línea>.
+        // Con un único --file el comportamiento es el de siempre (lo usa el launcher).
+        List<String> files = new ArrayList<>();
+        if (args.getOptionValues("file") != null) files.addAll(args.getOptionValues("file"));
+        if (args.getOptionValues("files-from") != null) {
+            for (String list : args.getOptionValues("files-from")) {
+                Files.readAllLines(Path.of(list)).stream().map(String::trim).filter(line -> !line.isEmpty()).forEach(files::add);
+            }
+        }
+        files.removeIf(String::isBlank);
+        if (files.isEmpty()) throw new IllegalArgumentException("--file is required");
+        if (files.size() == 1) {
+            importFile(files.getFirst());
+            return;
+        }
+        int failed = 0;
+        for (String file : files) {
+            try {
+                importFile(file);
+            } catch (Exception e) {
+                failed++;
+                System.err.println("event=extra_csv_failed file=" + file + " error=" + e.getMessage());
+            }
+        }
+        System.out.println("event=extra_csv_batch_finished files=" + files.size() + " failed=" + failed);
+        if (failed > 0) throw new IllegalStateException(failed + " of " + files.size() + " CSV files failed");
+    }
+
+    void importFile(String fileArgument) throws IOException {
         Path file = Path.of(fileArgument).toAbsolutePath().normalize();
         if (!Files.isRegularFile(file) || !file.startsWith(allowedRoot)) throw new IllegalArgumentException("CSV path is outside CSV_ALLOWED_ROOT");
         String name = file.getFileName().toString().toUpperCase(Locale.ROOT);
@@ -72,7 +99,7 @@ public class ExtraCsvImporter implements ApplicationRunner {
     }
 
     private void importOdds(Path file) throws IOException {
-        String marketType = file.getFileName().toString().split("_", 3)[1].toLowerCase(Locale.ROOT);
+        String marketType = marketType(file.getFileName().toString());
         List<Object[]> batch = new ArrayList<>();
         try (var reader = Files.newBufferedReader(file); var parser = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setTrim(true).get().parse(reader)) {
             require(parser, "match_id", "market", "period", "bookmaker", "bookmaker_id", "line", "home_line", "away_line", "home_odds", "draw_odds", "away_odds", "over_odds", "under_odds", "raw_text", "source_url");
@@ -89,6 +116,17 @@ public class ExtraCsvImporter implements ApplicationRunner {
     private static void require(org.apache.commons.csv.CSVParser parser, String... names) {
         var headers = parser.getHeaderNames();
         for (String name : names) if (!headers.contains(name)) throw new IllegalArgumentException("Missing CSV column: " + name);
+    }
+
+    /**
+     * Mercado del nombre ODDS_&lt;MERCADO&gt;_&lt;AAAAMMDDhhmmss&gt;_&lt;id&gt;.csv: «home_away», «1x2»,
+     * «over_under», «asian_handicap». Antes se cortaba en el primer «_» y quedaba
+     * «home», «over» o «asian».
+     */
+    static String marketType(String fileName) {
+        var matcher = java.util.regex.Pattern.compile("(?i)^ODDS_(.+?)_\\d{14}_.+$").matcher(fileName);
+        String market = matcher.matches() ? matcher.group(1) : fileName.split("_", 3)[1];
+        return market.toLowerCase(Locale.ROOT);
     }
 
     private static String text(CSVRecord row, String name) { return row.isMapped(name) ? row.get(name) : ""; }
